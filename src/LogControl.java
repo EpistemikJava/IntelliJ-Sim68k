@@ -267,7 +267,7 @@ public class LogControl {
 
     /** default Log name parameter */
     static final String
-                PROJECT_NAME  = MineSwinger.PROJECT_NAME,
+                PROJECT_NAME  = Sim68k.class.getSimpleName(),
                 LOG_SUBFOLDER = "logs/",
                 LOG_ROLLOVER_SPEC = "_%u-%g",
                 XML_LOGFILE_TYPE  = ".xml",

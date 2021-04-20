@@ -11,6 +11,8 @@
  *
  ********************************************************************************/
 
+import java.lang.instrument.Instrumentation;
+
 class Sim68k {
     /*
      *  DATA DEFINITIONS
@@ -664,14 +666,16 @@ class Sim68k {
             switch( mode )
             {
                 case DATA_REGISTER_DIRECT:
-                    switch( dsz )
-                    {
-                        case byteSize: setBits( &(DR[RegNo]), 0, 7, tmpReg ); break;
-                        case wordSize: setWord( &(DR[RegNo]), LEAST, getWord(tmpReg, LEAST) ); break;
-                        case longSize: DR[RegNo] = tmpReg; break;
-
-                        default: logger.severe("*** ERROR >> INVALID data size '" + dsz + "' at PC = " + (PC-2));
-                                 H = true ;
+                    switch (dsz) {
+                        case byteSize -> {
+                            DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)tmpReg);
+                        } case wordSize -> {
+                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(tmpReg, LEAST) );
+                        } case longSize -> DR[RegNo] = tmpReg;
+                        default -> {
+                            logger.severe( "*** ERROR >> INVALID data size '" + dsz + "' at PC = " + ( PC - 2 ) );
+                            H = true;
+                        }
                     }
                     break;
 
@@ -697,7 +701,7 @@ class Sim68k {
                     // We need to access memory.
                     // ATTENTION: for some instructions, the address register has already been incremented by fillTmpReg()
                     // DO NOT increment it a 2nd time here
-                    MAR = (short) (AR[RegNo] - numBytes(dsz));
+                    MAR = (short) (AR[RegNo] - dsz.sizeValue());
                     MDR = tmpReg;
                     mem.access( dsz, RW );
                     break;
@@ -720,25 +724,23 @@ class Sim68k {
         // set Status bits Z & N
         void setZN( int tmpReg )
         {
-            switch( DS )
-            {
-                case byteSize:
-                    Z = ( (getBits(getWord(tmpReg, LEAST), 0,  7) | 0) == 0 );
-                    N = (  getBits(getWord(tmpReg, LEAST), 7,  7) == 1 );
-                    break;
-
-                case wordSize:
-                    Z = ( (getBits(getWord(tmpReg, LEAST),  0, 15) | 0) == 0 );
-                    N = (  getBits(getWord(tmpReg, LEAST), 15, 15) == 1 );
-                    break;
-
-                case longSize:
-                    Z = ( (tmpReg | 0x00000000) == 0 );
-                    N = ( getBits(getWord(tmpReg, MOST), 15, 15) == 1 );
-                    break;
-
-                default: logger.severe("*** ERROR >> INVALID data size '" + DS + "' at PC = " + (PC-2));
-                         H = true ;
+            switch (DS) {
+                case byteSize -> {
+                    Z = getBits( getWord( tmpReg, LEAST ), 0, 7 ) == 0;
+                    N = getBits( getWord( tmpReg, LEAST ), 7, 7 ) == 1;
+                }
+                case wordSize -> {
+                    Z = ( ( getBits( getWord( tmpReg, LEAST ), 0, 15 ) ) == 0 );
+                    N = ( getBits( getWord( tmpReg, LEAST ), 15, 15 ) == 1 );
+                }
+                case longSize -> {
+                    Z = ( tmpReg == 0 );
+                    N = ( getBits( getWord( tmpReg, MOST ), 15, 15 ) == 1 );
+                }
+                default -> {
+                    logger.severe( "*** ERROR >> INVALID data size '" + DS + "' at PC = " + ( PC - 2 ) );
+                    H = true;
+                }
             }
         }
 
@@ -785,8 +787,7 @@ class Sim68k {
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     // 3. Compute TMPR using TMPS & TMPD
                     TMPR = TMPS + TMPD ;
-                    
-                        logger.info("TMPR($" + TMPR + ") = TMPS($" + TMPS + ") + TMPD($" + TMPD + ")");
+                    logger.info("TMPR($" + TMPR + ") = TMPS($" + TMPS + ") + TMPD($" + TMPD + ")");
                     // 4. Update status bits HZNVC if necessary
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
@@ -799,7 +800,7 @@ class Sim68k {
                 case iADDQ:
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPS = 0 ;
-                    setByte( &TMPS, twobits.byte0, opcData );
+                    TMPS = setByte( TMPS, twobits.byte0, opcData );
                     // Sign extension if W or L ??
                     TMPR = TMPD + TMPS ;
                     
@@ -815,7 +816,6 @@ class Sim68k {
                     fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPR = TMPD - TMPS ;
-
                     logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") - TMPS($" + TMPS + ")");
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
@@ -827,11 +827,10 @@ class Sim68k {
                 case iSUBQ:
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPS = 0;
-                    setByte( &TMPS, twobits.byte0, opcData );
+                    TMPS = setByte( TMPS, twobits.byte0, opcData );
                     // Sign extension if W or L ??
                     TMPR = TMPD - TMPS;
-                    
-                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") - TMPS($" + TMPS + ")");
+                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") - TMPS($" + TMPS + ")");
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
@@ -844,18 +843,17 @@ class Sim68k {
                     {
                         fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
                         fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                        if( getBits( (short) TMPS,15,15) == 1 )
+                        if( getBits( (short)TMPS, 15, 15) == 1 )
                             TMPS = TMPS | 0xFFFF0000 ;
-                        if( getBits( (short) TMPD,15,15) == 1 )
+                        if( getBits( (short)TMPD, 15, 15) == 1 )
                             TMPD = TMPD | 0xFFFF0000 ;
                         TMPR = TMPD * TMPS;
-                        
-                            logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") * TMPS($" + TMPS + ")");
+                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") * TMPS($" + TMPS + ")");
                         setZN( TMPR );
                         V = false;
                         C = false;
                         setResult( TMPR, OpAddr2, DataSize.longSize, M2, R2 );
-                    }// if size = 1
+                    }
                     break;
                 // signed
                 case iDIVS:
@@ -863,49 +861,39 @@ class Sim68k {
                     {
                         fillTmpReg( &TMPS, OpAddr1, DataSize.wordSize, M1, R1);
                         
-                            logger.info("TMPS = $" + TMPS);
+                        logger.info("TMPS = $" + TMPS);
                         if( checkCond( (TMPS != 0), "Division by Zero" ) )
                         {
                             fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                            
-                                logger.info("TMPD = $" + TMPD);
+                            logger.info("TMPD = $" + TMPD);
                             V = ( (TMPD / TMPS) < -32768 ) | ( (TMPD / TMPS) > 32767 );
-                            if( TMPS > 0x8000 )
-                            {
+                            if( TMPS > 0x8000 ) {
                                 i = 1;
                                 TMPS = (TMPS ^ 0xFFFF) + 1;
-                                TMPD = (TMPD ^ 0xFFFFFFFF) + 1;
+                                TMPD = ~TMPD + 1;
                             };
                             
-                                logger.info("TMPS = $" + TMPS + "; TMPD = $" + TMPD);
-                            if( ((TMPD / TMPS) == 0) && (i == 1) )
-                            {
-                                setWord( &TMPR, LEAST, 0 );
-                                
-                                    logger.info("TMPR = $" + TMPR);
-                                TMPD = (TMPD ^ 0xFFFFFFFF) + 1 ;
-                                
-                                    logger.info("TMPD = $" + TMPD);
-                                setWord( &TMPR, MOST, TMPD % TMPS );
-                                
-                                    logger.info("TMPR = $" + TMPR);
+                            logger.info("TMPS = $" + TMPS + "; TMPD = $" + TMPD);
+                            if( ((TMPD / TMPS) == 0) && (i == 1) ) {
+                                TMPR = setWord( TMPR, LEAST, (short) 0 );
+                                logger.info("TMPR = $" + TMPR);
+                                TMPD = ~TMPD + 1 ;
+                                logger.info("TMPD = $" + TMPD);
+                                TMPR = setWord( TMPR, MOST, (short) (TMPD % TMPS) );
+                                logger.info("TMPR = $" + TMPR);
                             }
-                            else
-                            {
+                            else {
                                 TMPR = TMPD / getWord(TMPS, LEAST);
-                                
-                                    logger.info("TMPR = $" + TMPR);
+                                logger.info("TMPR = $" + TMPR);
                                 setWord( &TMPR, MOST, (TMPD % getWord(TMPS, LEAST)) );
-                                
-                                    logger.info("TMPR = $" + TMPR);
+                                logger.info("TMPR = $" + TMPR);
                             };
-                            
-                                logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") / TMPS($" + TMPS + ")");
+                            logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") / TMPS($" + TMPS + ")");
                             setZN( TMPR );
                             C = false ;
                             setResult( TMPR, OpAddr2, DS, M2, R2 );
-                        }// if not div by 0
-                    }// if longSize
+                        }
+                    }
                     break;
                 // negate
                 case iNEG:
@@ -928,7 +916,7 @@ class Sim68k {
                 // bitwise
                 case iNOT:
                     fillTmpReg( &TMPD, OpAddr1, DS, M1, R1 );
-                    TMPR = !TMPD ;
+                    TMPR = ~TMPD ;
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -940,7 +928,7 @@ class Sim68k {
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPR = TMPD & TMPS ;
                     
-                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") & TMPS($" + TMPS + ")");
+                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") & TMPS($" + TMPS + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -952,7 +940,7 @@ class Sim68k {
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPR = TMPD | TMPS ;
                     
-                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") | TMPS($" + TMPS + ")");
+                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") | TMPS($" + TMPS + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -964,7 +952,7 @@ class Sim68k {
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     TMPR = TMPD ^ TMPS;
                     
-                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") ^ TMPS($" + TMPS + ")");
+                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") ^ TMPS($" + TMPS + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -977,16 +965,14 @@ class Sim68k {
                     setZN( TMPR );
                     V = false;
                     if( opcData > 0 )
-                    {
-                        C = ( getBits(TMPD, DS.sizeValue()*8-opcData, DS.sizeValue()*8-opcData) == 1 ) ? true : false ;
-                    }
+                        C = getBits( (short) TMPD, DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
                     else
                         C = false;
                     setResult( TMPR, OpAddr2, DS, M2, R2 );
                     break;
                 // shift right
                 case iLSR:
-                    /**
+                    /*
                      In Turbo Pascal, SHR did NOT sign-extend, whereas >> in C is "machine-dependent" and in this platform
                      (Linux x86_64) it DOES sign extension for variables, so DO NOT get the proper answer for some operations.
                      We want to ensure there is NEVER any sign extension, to duplicate the Pascal results,
@@ -995,19 +981,16 @@ class Sim68k {
                      Instead, need to put 0x80000000 in a register and proceed as below:
                      */
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    
-                        logger.info("TMPD = $" + TMPD + "; opcData = " + opcData);
+                    logger.info("TMPD = $" + TMPD + "; opcData = " + opcData);
                     TMPS = 0x80000000 ;
                     TMPR = TMPS >> (opcData-1) ;
-                    
-                        logger.info("TMPS = $" + TMPS + "; TMPR = TMPS >> " + (opcData-1) + " = $" + TMPR);
-                    TMPS = !TMPR ;
-                    
-                        logger.info("TMPS = !TMPR = $" + TMPS);
+                    logger.info("TMPS = $" + TMPS + "; TMPR = TMPS >> " + (opcData-1) + " = $" + TMPR);
+                    TMPS = ~TMPR ;
+                    logger.info("TMPS = !TMPR = $" + TMPS);
                     TMPR = (TMPD >> opcData) & TMPS ;
                     setZN( TMPR );
                     V = false;
-                    C = ( opcData > 0 ) ? ( getBits( (short) TMPD, opcData-1, opcData-1) == 1 ) : false ;
+                    C = opcData > 0 && ( getBits( (short) TMPD, opcData - 1, opcData - 1 ) == 1 );
                     setResult( TMPR, OpAddr2, DS, M2, R2 );
                     break;
                 // rotate left
@@ -1016,10 +999,10 @@ class Sim68k {
                     opcData = (byte) (opcData % (8 * DS.sizeValue() ));
                     TMPR = TMPD + opcData ;
                     TMPS = TMPD >> ( (8*DS.sizeValue()) - opcData );
-                    setBits( &TMPR, 0, opcData-1, TMPS );
+                    TMPR = setBits( TMPR, (byte)0, (byte)(opcData-1), (short)TMPS );
                     setZN( TMPR );
                     V = false;
-                    C = ( opcData > 0 ) ? ( getBits( (short) TMPD, (DS.sizeValue()*8)-opcData, (DS.sizeValue()*8)-opcData) == 1 ) : false ;
+                    C = opcData > 0 && ( getBits( (short) TMPD, ( DS.sizeValue() * 8 ) - opcData, ( DS.sizeValue() * 8 ) - opcData ) == 1 );
                     setResult( TMPR, OpAddr2, DS, M2, R2 );
                     break;
                 // rotate right
@@ -1027,10 +1010,10 @@ class Sim68k {
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
                     opcData = (byte) (opcData % ( 8*DS.sizeValue() ));
                     TMPR = TMPD >> opcData;
-                    setBits( &TMPR, (8*DS.sizeValue())-opcData, (8*DS.sizeValue())-1, TMPD );
+                    TMPR = setBits( TMPR, (byte)(8*DS.sizeValue() - opcData), (byte)(8*DS.sizeValue()-1), (short)TMPD );
                     setZN( TMPR );
                     V = false;
-                    C = ( opcData > 0 ) ? ( getBits( (short) TMPD, opcData-1, opcData-1) == 1 ) : false ;
+                    C = opcData > 0 && ( getBits( (short) TMPD, opcData - 1, opcData - 1 ) == 1 );
                     setResult( TMPR, OpAddr2, DS, M2, R2 );
                     break;
                 // compare
@@ -1078,7 +1061,7 @@ class Sim68k {
                 case iBGE:
                     if( checkCond( (M1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
                             && checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) )
-                        if( !(N^V) ) PC = OpAddr1 ;
+                        if( N == V ) PC = OpAddr1 ;
                     break;
                 // branch if LTE
                 case iBLE:
@@ -1094,7 +1077,7 @@ class Sim68k {
                 // move quick
                 case iMOVQ:
                     fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    setByte( &TMPD, twobits.byte0, opcData );
+                    TMPD = setByte( TMPD, twobits.byte0, opcData );
                     // Sign extension if W or L ??
                     setZN( TMPD );
                     V = false;
@@ -1174,37 +1157,33 @@ class Sim68k {
                 // display
                 case iDSP:
                     fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    switch( M1 )
-                    {
-                        case DATA_REGISTER_DIRECT:      logger.info("[ D" + (int)R1 + " ]  = "); break;
-                        case ADDRESS_REGISTER_DIRECT:   logger.info("[ A" + (int)R1 + " ]  = "); break;
-
-                        case ADDRESS_REGISTER_INDIRECT: logger.info("[$" + AR[R1] + " ] = "); break;
-
-                        case ADDRESS_REGISTER_INDIRECT_POSTINC: // numBytes(DS) subtracted to compensate post-incrementation
-                            tmpA = (short) (AR[R1] - DS.sizeValue());
-                            logger.info("[$" + tmpA + " ] = ");
-                            break;
-
-                        case ADDRESS_REGISTER_INDIRECT_PREDEC: logger.info("[$" + AR[R1] + "] = "; break;
-
-                        case RELATIVE_ABSOLUTE: logger.info("[$" + OpAddr1 + "] = "); break;
-
-                        default: logger.severe("\n*** ERROR >> INVALID address mode '" + M1
-                                 + "' for instruction '" + Mnemo[OpId] + "' at PC = " + (PC-2));
-                                 H = true ;
-                                 return ;
+                    switch (M1) {
+                        case DATA_REGISTER_DIRECT -> logger.info( "[ D" + (int) R1 + " ]  = " );
+                        case ADDRESS_REGISTER_DIRECT -> logger.info( "[ A" + (int) R1 + " ]  = " );
+                        case ADDRESS_REGISTER_INDIRECT -> logger.info( "[$" + AR[R1] + " ] = " );
+                        case ADDRESS_REGISTER_INDIRECT_POSTINC -> { // numBytes(DS) subtracted to compensate post-incrementation
+                            tmpA = (short) ( AR[R1] - DS.sizeValue() );
+                            logger.info( "[$" + tmpA + " ] = " );
+                        }
+                        case ADDRESS_REGISTER_INDIRECT_PREDEC -> logger.info( "[$" + AR[R1] + "] = ";
+                        case RELATIVE_ABSOLUTE -> logger.info( "[$" + OpAddr1 + "] = " );
+                        default -> {
+                            logger.severe( "\n*** ERROR >> INVALID address mode '" + M1
+                                    + "' for instruction '" + Mnemo[OpId] + "' at PC = " + ( PC - 2 ) );
+                            H = true;
+                            return;
+                        }
                     }
-                    switch( DS )
-                    {
-                        case byteSize: logger.info("$" + (TMPS & 0xff)   + " (" + DataSize.byteSize.sizeValue() + ")"); break;
-                        case wordSize: logger.info("$" + (TMPS & 0xffff) + " (" + DataSize.wordSize.sizeValue() + ")"); break;
-                        case longSize: logger.info("$" +  TMPS           + " (" + DataSize.longSize.sizeValue() + ")"); break;
-
-                        default: logger.severe("\n*** ERROR >> INVALID data size '" + DS
-                                 + "' for instruction '" + Mnemo[OpId] + "' at PC = " + (PC-2));
-                                 H = true ;
-                                 return ;
+                    switch (DS) {
+                        case byteSize -> logger.info( "$" + ( TMPS & 0xff ) + " (" + DataSize.byteSize.sizeValue() + ")" );
+                        case wordSize -> logger.info( "$" + ( TMPS & 0xffff ) + " (" + DataSize.wordSize.sizeValue() + ")" );
+                        case longSize -> logger.info( "$" + TMPS + " (" + DataSize.longSize.sizeValue() + ")" );
+                        default -> {
+                            logger.severe( "\n*** ERROR >> INVALID data size '" + DS
+                                    + "' for instruction '" + Mnemo[OpId] + "' at PC = " + ( PC - 2 ) );
+                            H = true;
+                            return;
+                        }
                     }
                     break;
                 // display status register
@@ -1226,9 +1205,7 @@ class Sim68k {
 
         // Determines the format of the instruction: return True if F1, False if F2
         boolean formatF1( byte opid ) {
-            if( (opid == iADDQ) || (opid == iSUBQ) || ((opid >= iLSL) && (opid <= iROR)) || (opid == iMOVQ) )
-                return false ;
-            return true ;
+            return ( opid != iADDQ ) && ( opid != iSUBQ ) && ( ( opid < iLSL ) || ( opid > iROR ) ) && ( opid != iMOVQ );
         }
 
     }
@@ -1452,13 +1429,13 @@ class Sim68k {
 
                 case TEST :
                     // info on system data sizes
-                    logger.info("sizeof( bool ) == " + sizeof(bool));
-                    logger.info("sizeof( char ) == " + sizeof(char));
-                    logger.info("sizeof( short ) == " + sizeof(short));
-                    logger.info("sizeof( int ) == " + sizeof(int));
-                    logger.info("sizeof( long ) == " + sizeof(long));
+                    logger.info("sizeof( boolean ) == " + Boolean.);
+                    logger.info("sizeof( char ) == " + Character.BYTES);
+                    logger.info("sizeof( short ) == " + Short.BYTES);
+                    logger.info("sizeof( int ) == " + Integer.BYTES);
+                    logger.info("sizeof( long ) == " + Long.BYTES);
                     logger.info("sizeof( long long ) == " + sizeof(long long));
-                    logger.info("sizeof( bit ) == " + sizeof(bit));
+                    logger.info("sizeof( Bit ) == " + Instrumentation.getObjectSize(Bit) );
                     logger.info("sizeof( twobits ) == " + sizeof(enum twobits));
                     logger.info("sizeof( dataSize ) == " + sizeof(enum dataSize));
                     logger.info("sizeof( addressmode ) == " + sizeof(enum addressmode));
