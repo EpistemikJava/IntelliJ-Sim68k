@@ -1,0 +1,11 @@
+
+Status Bits: H:FALSE N:TRUE Z:FALSE V:TRUE C:FALSE
+[$0006] = $9978 (word)
+Status Bits: H:FALSE N:TRUE Z:FALSE V:FALSE C:FALSE
+[$0006] = $DCAC (word)
+Status Bits: H:FALSE N:FALSE Z:TRUE V:FALSE C:TRUE
+[ D0 ]  = $00000000 (long)
+Status Bits: H:FALSE N:FALSE Z:FALSE V:FALSE C:FALSE
+[ D0 ]  = $00000100 (long)
+Status Bits: H:FALSE N:TRUE Z:FALSE V:FALSE C:TRUE
+[$000C] = $FFFF5E9A (long)
