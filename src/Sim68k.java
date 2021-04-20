@@ -11,24 +11,28 @@
  *
  ********************************************************************************/
 
-import java.lang.instrument.Instrumentation;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Locale;
+import java.util.Scanner;
 
 class Sim68k {
     /*
      *  DATA DEFINITIONS
      *=========================================================================================================*/
 
-    final static char EOL = '\n' ;
-    final static char COMMENT_MARKER = '/';
-    final static char HEX_MARKER = '$';
-    final static char QUIT = 'q';
-    final static char EXECUTE = 'e';
-    final static char TEST = 't';
+    final static String
+        COMMENT_MARKER = "/" ,
+        QUIT    = "q" ,
+        EXECUTE = "e" ,
+        TEST    = "t" ;
+
+    final static char HEX_MARKER = '$' ;
 
     // List of OpCode | OpId
     final static int iADD =   0 ; // Regular binary integer addition
     final static int iADDQ =  1 ; // Quick binary integer addition
-    final static int iSUB =   2 ;// Regular binary integer subtraction
+    final static int iSUB =   2 ; // Regular binary integer subtraction
     final static int iSUBQ =  3 ; // Quick binary integer subtraction
     final static int iMULS =  4 ; // Signed binary multiplication
     final static int iDIVS =  5 ; // Signed binary division
@@ -61,9 +65,8 @@ class Sim68k {
 
     final boolean LEAST = false ;
     final boolean MOST  = true ;
-
+/*
     //  typedef  bool  bit ;
-//    String[] bitValue = { "FALSE", "TRUE" };
     enum Bit {
         ZERO( 0, false, "FALSE" ),
         ONE( 1, true, "TRUE");
@@ -82,7 +85,7 @@ class Sim68k {
         boolean boolValue() { return tf; }
         String strValue() { return name; }
     }
-
+*/
     enum twobits { byte0, byte1, byte2, byte3 }
 
     // 0x0..0xFF = 0x80..0x7F in 2's CF
@@ -186,11 +189,11 @@ class Sim68k {
     boolean N ; // Negative
     boolean H ; // Halt
 
-    int[] DR;   // [2] ; // Data Registers
-    short[] AR; // [2] ; // Address Registers
+      int[] DR; // two Data Registers
+    short[] AR; // two Address Registers
 
-    short MAR ;  // Memory Address Register
-    int   MDR ;  // Memory Data Register
+    short MAR ; // Memory Address Register
+    int   MDR ; // Memory Data Register
 
     TempReg trDest, trSrc, trResult;  // Temporary Registers Dest, Src, Result
 
@@ -347,11 +350,9 @@ class Sim68k {
         switch( mode ) {
             case DATA_REGISTER_DIRECT:
                 switch (dsz) {
-                    case byteSize -> {
-                        DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)get() );
-                    } case wordSize -> {
-                        DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
-                    } case longSize -> DR[RegNo] = get();
+                    case byteSize -> DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)get() );
+                    case wordSize -> DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
+                    case longSize -> DR[RegNo] = get();
                     default -> {
                         logger.severe( "*** ERROR >> INVALID data size '" + dsz + "' at PC = " + ( PC - 2 ) );
                         H = true;
@@ -403,11 +404,9 @@ class Sim68k {
 
 }
 
-
     /// store information
     class Memory {
-        //    public:
-        /// Constructor
+
         Memory() {
             logger.logInit();
             memory = new byte[memorySize];
@@ -480,20 +479,16 @@ class Sim68k {
         }
     }
 
-    // Read into memory a machine language program contained in a file
-    /// fetch and execute
+    // fetch and execute
     class Controller {
+
         Controller() {
-//        : mem(mry), PC(0), OpCode(0), OpAddr1(0), OpAddr2(0), TMPD(0), TMPS(0), TMPR(0),
-//    C(false), V(false), Z(false), N(false), H(false), MAR(0), MDR(0), RW(false),
-//    DS(byteSize), OpId(0), numOprd(0), opcData(0), R1(0), R2(0),
-//    M1(DATA_REGISTER_DIRECT), M2(DATA_REGISTER_DIRECT), Sm(false), Dm(false), Rm(false)
-            TempReg trDest = new TempReg();
-            TempReg trSrc = new TempReg();
-            TempReg trResult = new TempReg();  // Temporary Registers Dest, Src, Result
+            trDest = new TempReg();
+            trSrc = new TempReg();
+            trResult = new TempReg();  // Temporary Registers Dest, Src, Result
         }
 
-        boolean  RW  ;  // read/write
+        boolean  RW ;  // read/write
         DataSize DS ; // byte, short, long
 
         byte OpId ;    // numeric id for opCodes
@@ -507,10 +502,9 @@ class Sim68k {
         // Most Significant Bits of TMPS, TMPD, & TMPR
         boolean Sm, Dm, Rm ;
 
-        // Generic error verification function, with message display
         /*  Generic error verification function, with message display,
          *  if Cond is False, display an error message (including the OpName)
-         *  The Halt Status boolean will also be set if there is an Error
+         *  The Halt bit will also be set if there is an Error
          */
         boolean checkCond( boolean Cond, String Message ) {
             if( Cond )
@@ -519,9 +513,6 @@ class Sim68k {
             H = true ; // program will halt
             return false ;
         }
-
-        // check the status of bit H
-        boolean halt() { return H; }
 
         // Fetch the OpCode from memory
         void fetchOpCode() {
@@ -638,10 +629,8 @@ class Sim68k {
 
         //  The execution of each instruction is done via its micro-program
         void execInstr() {
-            byte i ; // counter
+            byte i = 0 ; // counter
             short tmpA ;
-            String input ;
-
             logger.info("Controller::execInstr(" + Mnemo[OpId] + "." + DS.sizeValue()
                         + "): OpAd1 = " + OpAddr1 + ", OpAd2 = " + OpAddr2
                         + ", M1 = " + M1 + ", R1 = " + R1 + ", M2 = " + M2 + ", R2 = " + R2);
@@ -742,7 +731,7 @@ class Sim68k {
                                 i = 1;
                                 trSrc.set( (trSrc.get() ^ 0xFFFF) + 1 );
                                 trDest.set( ~(trDest.get()) + 1 );
-                            };
+                            }
                             
                             logger.info("TMPS = $" + trSrc + "; TMPD = $" + trDest );
                             if( (( trDest.get() / trSrc.get() ) == 0) && (i == 1) ) {
@@ -975,11 +964,11 @@ class Sim68k {
                     break;
                 // input
                 case iINP:
-                    logger.info("Enter a value ");
+                    System.out.println("Enter a value: ");
                     switch (DS) {
-                        case byteSize -> logger.info( "(" + DataSize.byteSize.sizeValue() + ") for " );
-                        case wordSize -> logger.info( "(" + DataSize.wordSize.sizeValue() + ") for " );
-                        case longSize -> logger.info( "(" + DataSize.longSize.sizeValue() + ") for " );
+                        case byteSize -> System.out.println( "(" + DataSize.byteSize.sizeValue() + ") for " );
+                        case wordSize -> System.out.println( "(" + DataSize.wordSize.sizeValue() + ") for " );
+                        case longSize -> System.out.println( "(" + DataSize.longSize.sizeValue() + ") for " );
                         default -> {
                             logger.severe( "ERROR >> INVALID data size '" + DS + "' for instruction '" + OpId
                                             + "' at PC = " + ( PC - 2 ) );
@@ -988,11 +977,11 @@ class Sim68k {
                         }
                     }
                     switch (M1) {
-                        case DATA_REGISTER_DIRECT -> logger.info( "the register D" + R1 );
-                        case ADDRESS_REGISTER_DIRECT -> logger.info( "the register A" + R1 );
+                        case DATA_REGISTER_DIRECT -> System.out.println( "the register D" + R1 );
+                        case ADDRESS_REGISTER_DIRECT -> System.out.println( "the register A" + R1 );
                         case ADDRESS_REGISTER_INDIRECT, ADDRESS_REGISTER_INDIRECT_PREDEC, ADDRESS_REGISTER_INDIRECT_POSTINC ->
-                                logger.info( "the memory address " + AR[R1] );
-                        case RELATIVE_ABSOLUTE -> logger.info( "the memory address " + OpAddr1 );
+                                System.out.println( "the memory address " + AR[R1] );
+                        case RELATIVE_ABSOLUTE -> System.out.println( "the memory address " + OpAddr1 );
                         default -> {
                             logger.info( "ERROR >> INVALID mode type '" + M1 + "' for instruction '" + OpId
                                          + "' at PC = " + ( PC - 2 ) );
@@ -1000,28 +989,29 @@ class Sim68k {
                             return;
                         }
                     }
-                    logger.info(": ");
-                    cin >> input ;
-                        logger.info("input == $" + input);
-                        logger.info("input.c_str() == $" + input.c_str());
-                        logger.info("strtol( input.c_str(), (char**)NULL, 0 ) == $"
-                                + strtol( input.c_str(), (char**)NULL, 0 ));
-                        logger.info("strtoull( input.c_str(), (char**)NULL, 0 ) == $"
-                                + strtoull( input.c_str(), (char**)NULL, 0 ));
-
+                    System.out.println(": ");
+                    String inpStr = "0";
+                    try {
+                        Scanner inpScanner = new Scanner( System.in );
+                        inpStr = inpScanner.next();
+                        logger.info("input == $" + inpStr);
+                        logger.info("Integer.getInteger(inpStr) == $" + Integer.getInteger("0x" + inpStr) );
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     /*
                      * On Windows, where the size of long is 4 bytes, even on my Windows 10 x64 laptop,
                      * strtol() evaluates String "0xFFFFFFFF" to int 0x7FFFFFFF!!
                      * Use strtoull() to ensure the maximum size to store our input without problems interpreting sign.
                      * Seems to work, so far, for both Linux x86_64 and Windows x64...
                      */
-                    trDest = (int)strtoull( input.c_str(), (char**)NULL, 0 );
-                    if( nDebugLevel > 0)
-                        logger.info("TMPD == $" + trDest );
+                    trDest.set( Integer.getInteger("0x" + inpStr) );
+                    logger.info("TMPD == $" + trDest );
                     setZN( trDest );
                     C = false;
                     V = false;
-                    setResult( trDest, OpAddr1, DS, M1, R1 );
+                    trDest.setResult( OpAddr1, DS, M1, R1 );
                     break;
                 // display
                 case iDSP:
@@ -1034,7 +1024,7 @@ class Sim68k {
                             tmpA = (short) ( AR[R1] - DS.sizeValue() );
                             logger.info( "[$" + tmpA + " ] = " );
                         }
-                        case ADDRESS_REGISTER_INDIRECT_PREDEC -> logger.info( "[$" + AR[R1] + "] = ";
+                        case ADDRESS_REGISTER_INDIRECT_PREDEC -> logger.info( "[$" + AR[R1] + "] = ");
                         case RELATIVE_ABSOLUTE -> logger.info( "[$" + OpAddr1 + "] = " );
                         default -> {
                             logger.severe( "\n*** ERROR >> INVALID address mode '" + M1
@@ -1082,117 +1072,71 @@ class Sim68k {
 
     class Processor
     {
-        Processor() { //: mem(), ctrl(mem)
-            MnemoInit();
+        Processor() {
+            mem = new Memory();
             DR = new int[2] ;
             AR = new short[2] ;
             ctrl = new Controller();
+            MnemoInit();
         }
 
         private final Controller ctrl;
 
         // Read into memory a machine language program contained in a file
-        boolean loadProgram( String input )
-        {
+        boolean loadProgram( String fname ) {
             boolean inComment = false ;
-            boolean inHex = false;
-            int numHex = 0;
-
             byte address = 0 ;
-            char ch ;
-            String hex1, hex2 ;
-            long hexVal = 0 ;
-
-            String mesg ; // error handling
-
-            String inputFolder = "/home/marksa/dev/CodeBlocks/Cproj/Sim68k/in/" ;
-            String filename = inputFolder + input ;
+            String input ;
+            long hexVal ;
+            String nxtline ;
+            String inputFolder = "/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/in/" ;
+            String filename = inputFolder + fname ;
 
             try
             {
-                ifstream inputfile( filename.c_str() );
-                if( !inputfile )
-                {
-                    mesg = String( "\nError occurred trying to open file: " ) + String( filename );
-                    throw mesg ;
-                }
-                else
-                    logger.info("Processing file '" + filename + "'");
+                File pf = new File( filename );
+                Scanner fileScanner = new Scanner( pf );
+                logger.info( "Processing file: " + filename );
 
-                // get the data from the file
-                while( !inputfile.eof() )
-                {
-                    inputfile >> ch ; // get a character
-                    
-                        logger.info("Read character: " + ch);
+                // get lines from the file
+                while( fileScanner.hasNextLine() ) {
+                    nxtline = fileScanner.nextLine();
+                    Scanner wordScanner = new Scanner( nxtline );
+                    // get words from the line
+                    while ( wordScanner.hasNext() ) {
+                        input = wordScanner.next();
+                        logger.info("Read word: " + input);
 
-                    // beginning & end of comment sections
-                    if( ch == COMMENT_MARKER )
-                    {
-                        inComment = ! inComment ;
-                        continue ;
-                    }
+                        // beginning & end of comment sections
+                        if( input.equals(COMMENT_MARKER) )
+                        {
+                            inComment = ! inComment ;
+                            continue ;
+                        }
 
-                    // skip comment
-                    if( inComment )
-                        continue ;
+                        // skip comment
+                        if( inComment )
+                            continue ;
 
-                    // skip EOL char; also, comment sections end at EOL
-                    if( ch == Sim68k.EOL )
-                    {
-                        inComment = false ;
-                        continue ;
-                    }
-
-                    // process hex input
-                    if( inHex )
-                    {
-                        numHex++ ;
-                        
-                            logger.info("In Hex processing #" + numHex);
-                        if( numHex == 2 ) {
-                            hex2 = String(1, ch) ;
-                            hexVal = strtol( (hex1 + hex2).c_str(), (char**)NULL, 16 );
-                            logger.info("Processor::loadProgram(): Read value '" + hexVal ;
-                            logger.info("' into memory at location: " + dec + address);
-
-                            mem.load(address, (byte)hexVal);
+                        // process hex input
+                        if( input.charAt(0) == HEX_MARKER ) {
+                            String hx = input.substring( 1, 3 ).toUpperCase( Locale.ROOT );
+                            hexVal = Integer.parseInt( input, 16 );
+                            logger.info("Read value '0x" + hx + "' into memory at location: " + address);
+                            mem.load( address, (byte)hexVal );
                             address++ ;
-                            inHex = false ;
-                            numHex = 0 ;
-                        }
-                        else {
-                            hex1 = String(1, ch) ;
                         }
                     }
-
-                    // hex input next
-                    if( ch == HEX_MARKER )
-                    {
-                        inHex = true ;
-                    }
-
-                }// while( !inputfile.eof() )
-
-                inputfile.close();
+                    wordScanner.close();
+                }
+                fileScanner.close();
             }
-            catch( String& msg )
-            {
-                cout.flush();
-                usleep( 1001 ); // let any cout finish
-                cerr + msg + "\n");
-                usleep( 2002 );
-                return false ;
-            }
-            catch(...)
-            {
-                cout.flush();
-                usleep( 1001 ); // let any cout finish
-                cerr + "UNSPECIFIED ERROR!");
-                return false ;
+            catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return false;
             }
 
-            logger.info("Program loaded " + address + " bytes in memory.");
+            logger.info("Program loaded " + address + " bytes into memory.");
             return true ;
         }
 
@@ -1241,10 +1185,10 @@ class Sim68k {
                 ctrl.fetchOpCode();
                 ctrl.decodeInstr();
                 ctrl.fetchOperands();
-                if( !ctrl.halt() )
+                if( !H )
                     ctrl.execInstr();
             }
-            while( !ctrl.halt() );
+            while( !H );
 
             logger.info("\tEnd of Fetch-Execute Cycle");
         }
@@ -1255,89 +1199,70 @@ class Sim68k {
      **************************************************************************/
     public static void main(final String[] args) {
         System.out.println( "PROGRAM STARTED ON " + Thread.currentThread() );
-
-        // init logging
         String logLevel = args.length > 0 ? args[0] : LogControl.DEFAULT_CONSOLE_LEVEL.getName();
+        new Sim68k().startup(logLevel);
+    }
+
+    void startup(String logLevel) {
+        // init logging
         logControl = new LogControl(logLevel);
         logger = logControl.getLogger();
         logger.severe( Sim68k.class.getSimpleName() + " Log Level = " + logLevel );
 
-        char option = '0' ; // option chosen from the menu by the user
-        String input ;
+        String input = "0";
         int t;
-        String st;
-
-        Processor proc;
+        String hexstr;
+        Processor proc = new Processor();
+        Scanner inScanner = new Scanner(System.in);
 
         // Menu
-        while( option != QUIT )
-        {
-            logger.info("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
+        while( !input.equals(QUIT) ) {
 
-            // get a character
-            cin >> option ;
-            // flush all the rest
-            cin.ignore(1024, '\n');
+            System.out.println("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
+            // reads the next word
+            input = inScanner.next();
+            System.out.println("input = " + input);
 
-            switch( option )
+            switch( input )
             {
                 case EXECUTE :
                     // execution on the simulator
-                    logger.info("Name of the 68k binary program ('.68b' will be added automatically): ");
-                    cin >> input ;
+                    System.out.println("Name of the 68k binary program ('.68b' will be added automatically): ");
+                    input = inScanner.next();
+                    System.out.println("input = " + input);
 
                     if( proc.loadProgram(input + ".68b") ) {
                         // Start the processor
                         proc.start();
                     }
                     else {
-                        logger.info("\nFile '" + input + "' could NOT be found.");
-                        cin.ignore(1024, '\n');
+                        logger.severe("\nFile '" + input + "' could NOT be found.");
                     }
                     break;
 
                 case TEST :
                     // info on system data sizes
-                    logger.info("sizeof( boolean ) == " + Boolean.);
-                    logger.info("sizeof( char ) == " + Character.BYTES);
-                    logger.info("sizeof( short ) == " + Short.BYTES);
-                    logger.info("sizeof( int ) == " + Integer.BYTES);
-                    logger.info("sizeof( long ) == " + Long.BYTES);
-                    logger.info("sizeof( long long ) == " + sizeof(long long));
-                    logger.info("sizeof( Bit ) == " + Instrumentation.getObjectSize(Bit) );
-                    logger.info("sizeof( twobits ) == " + sizeof(enum twobits));
-                    logger.info("sizeof( dataSize ) == " + sizeof(enum dataSize));
-                    logger.info("sizeof( addressmode ) == " + sizeof(enum addressmode));
-                    logger.info("sizeof( byte ) == " + sizeof(byte));
-                    logger.info("sizeof( short ) == " + sizeof(short));
-                    logger.info("sizeof( int ) == " + sizeof(int));
-                    logger.info("sizeof( String ) == " + sizeof(String)));
+                    System.out.println("sizeof( byte ) == "  + Byte.BYTES);
+                    System.out.println("sizeof( char ) == "  + Character.BYTES);
+                    System.out.println("sizeof( short ) == " + Short.BYTES);
+                    System.out.println("sizeof( int ) == "   + Integer.BYTES);
+                    System.out.println("sizeof( long ) == "  + Long.BYTES);
 
                     t = 0xFFFFFFFF ;
-                    logger.info("int t = 0xFFFFFFFF == $" + t + " ; " + dec + t);
-                    st = "0xFFFFFFFF" ;
-                    logger.info("String st == " + st);
-                    logger.info("st.c_str() == " + st.c_str());
-                    t = (int)strtol( st.c_str(), (char**)NULL, 0 );
-                    logger.info("t = (int)strtol(st) == $" + t);
-                    t = (int)strtoul( st.c_str(), (char**)NULL, 0 );
-                    logger.info("t = (int)strtoul(st) == $" + t);
-                    t = (int)strtoll( st.c_str(), (char**)NULL, 0 );
-                    logger.info("t = (int)strtoll(st) == $" + t);
-                    t = (int)strtoull( st.c_str(), (char**)NULL, 0 );
-                    logger.info("t = (int)strtoull(st) == $" + t);
+                    System.out.println( "int t = 0xFFFFFFFF = $" + t  + " = " + Integer.toHexString(t) );
+                    hexstr = "FFFFFFFF" ;
+                    System.out.println("String hexstr = " + hexstr);
+                    long l = Long.parseLong(hexstr, 16);
+                    System.out.println( "Long.parseLong(" + hexstr + ") = " + l + " = " + Long.toHexString(l) );
 
                 case QUIT :
-                    logger.info("Bye!");
+                    System.out.println("Bye!");
                     break;
 
-                case EOL : break;
-
-                default: logger.info("Invalid Option. Please enter '" + EXECUTE + "' or '" + QUIT + "'.");
+                default: System.out.println("Invalid Option. Please enter '" + EXECUTE + "' or '" + QUIT + "'.");
             }
         }
+        inScanner.close();
         logger.info("\tPROGRAM ENDED");
-//        return 0 ;
     }
-
 }
