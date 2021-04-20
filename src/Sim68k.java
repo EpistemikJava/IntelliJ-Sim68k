@@ -101,19 +101,19 @@ class Sim68k {
 //  typedef signed int long_68k ;
 
     enum DataSize {
-        byteSize(1, "byte"),
-        wordSize(2, "word"),
-        longSize(4, "long");
+        byteSize((byte)1, "byte"),
+        wordSize((byte)2, "word"),
+        longSize((byte)4, "long");
 
-        private final byte size;
+        private final Byte size;
         private final String name;
 
-        DataSize(int sz, String nom) {
-            this.size = (byte) sz;
+        DataSize(byte sz, String nom) {
+            this.size = sz;
             this.name = nom;
         }
 
-        int sizeValue() { return size; }
+        Byte sizeValue() { return size; }
         String strValue() { return name; }
     }
     static DataSize getDataSize(int x) {
@@ -192,7 +192,7 @@ class Sim68k {
     short MAR ;  // Memory Address Register
     int   MDR ;  // Memory Data Register
 
-    int TMPD, TMPS, TMPR ;  // Temporary Registers Dest, Src, Result
+    TempReg trDest, trSrc, trResult;  // Temporary Registers Dest, Src, Result
 
     /**
      ***************************************************************************
@@ -273,7 +273,18 @@ class Sim68k {
         void set(int val) { value = val; }
         int get() {return value; }
 
-        void fill(
+        void add(TempReg trA, TempReg trB) { set( trA.get() + trB.get() ); }
+        void subtract(TempReg trA, TempReg trB) { set( trA.get() - trB.get() ); }
+        void multiply(TempReg trA, TempReg trB) { set( trA.get() * trB.get() ); }
+
+    /* ***************************************************************************
+     Since many instructions will make local fetches between temporary registers
+     (TMPS, TMPD, TMPR) & memory or the Dn & An registers it would be
+     useful to create procedures to transfer the shorts/bytes between them.
+     Here are 2 suggestions of procedures to do this.
+     **************************************************************************** */
+
+    void fill(
 //            int*   pReg,     // tmp Register to modify - TMPS, TMPD or TMPR
             short       opAddrNo, // address of Operand (OpAddr1 | OpAddr2), for addressMode 3
             DataSize    dsz,      // Data Size
@@ -281,8 +292,6 @@ class Sim68k {
             byte        regNo   ) // Register number for A[n] or D[n]
         {
             logger.info( "" );
-            boolean RW = true ;
-
             switch (mode) {
                 case DATA_REGISTER_DIRECT -> {
 //                        *pReg = DR[regNo];
@@ -328,54 +337,53 @@ class Sim68k {
 
     // Transfer the contents of temporary register to Register OR Memory
     void setResult(
-            int    tmpReg,   // Source Register (TMPD...)
-            short        OpAddrNo, // Operand Address (OpAddr1...)
-            DataSize dsz,      // Data Size
+//            int    tmpReg,   // Source Register (TMPD...)
+            short       OpAddrNo, // Operand Address (OpAddr1...)
+            DataSize    dsz,      // Data Size
             AddressMode mode,     // required Addressing Mode
             byte        RegNo )   // Register Number for A[n] or D[n]
     {
-        RW = false ;
-
-        // Depends on Addressing Mode
-        switch( mode )
-        {
+        logger.info( "" );
+        switch( mode ) {
             case DATA_REGISTER_DIRECT:
-                switch( dsz )
-                {
-                    case byteSize: setBits( &(DR[RegNo]), 0, 7, tmpReg ); break;
-                    case wordSize: setWord( &(DR[RegNo]), LEAST, getWord(tmpReg, LEAST) ); break;
-                    case longSize: DR[RegNo] = tmpReg; break;
-
-                    default: logger.severe("*** ERROR >> INVALID data size '" + dsz + "' at PC = " + (PC-2));
-                        H = true ;
+                switch (dsz) {
+                    case byteSize -> {
+                        DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)get() );
+                    } case wordSize -> {
+                        DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
+                    } case longSize -> DR[RegNo] = get();
+                    default -> {
+                        logger.severe( "*** ERROR >> INVALID data size '" + dsz + "' at PC = " + ( PC - 2 ) );
+                        H = true;
+                    }
                 }
                 break;
 
             case ADDRESS_REGISTER_DIRECT:
-                AR[RegNo] = getWord( tmpReg, LEAST );
+                AR[RegNo] = getWord( get(), LEAST );
                 break;
 
             case RELATIVE_ABSOLUTE:
                 // We need to access memory, except for branching & MOVA.
                 MAR = OpAddrNo;
-                MDR = tmpReg;
-                mem.access( dsz, RW );
+                MDR = get();
+                mem.access( dsz, false );
                 break;
 
             case ADDRESS_REGISTER_INDIRECT:
                 // We need to access memory.
                 MAR = AR[RegNo];
-                MDR = tmpReg;
-                mem.access( dsz, RW );
+                MDR = get();
+                mem.access( dsz, false );
                 break;
 
             case ADDRESS_REGISTER_INDIRECT_POSTINC:
                 // We need to access memory.
                 // ATTENTION: for some instructions, the address register has already been incremented by fillTmpReg()
                 // DO NOT increment it a 2nd time here
-                MAR = (short) (AR[RegNo] - numBytes(dsz));
-                MDR = tmpReg;
-                mem.access( dsz, RW );
+                MAR = (short) (AR[RegNo] - dsz.sizeValue());
+                MDR = get();
+                mem.access( dsz, false );
                 break;
 
             case ADDRESS_REGISTER_INDIRECT_PREDEC:
@@ -383,8 +391,8 @@ class Sim68k {
                 // ATTENTION: for some instructions, the address register has already been decremented by fillTmpReg
                 // DO NOT decrement it a 2nd time here
                 MAR = AR[RegNo];
-                MDR = tmpReg;
-                mem.access( dsz, RW );
+                MDR = get();
+                mem.access( dsz, false );
                 break;
 
             default: // invalid addressMode
@@ -413,15 +421,13 @@ class Sim68k {
             memory[location] = data ;
         }
 
-        // Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory
-        /** Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory.
+        /*  Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory.
          *  Verifies if we are trying to access an address outside the range allowed for addressing [0x0000..0x1000].
          *  Uses the RW (read|write) boolean.
          *  Parameter dsz determines the data size (byte, short, int/long).
          *  >> 2018-11-22: other parameters needed when put MAR, MDR, RW, H as Controller member variables
          */
         void access(DataSize dsz, boolean RW ) {
-    //      MAR = 0x1001 ; // debug
             if( MAR < memorySize ) { // valid Memory Address range
                 if( RW ) { // Read = copy an element from memory to CPU
                     switch (dsz) {
@@ -438,7 +444,7 @@ class Sim68k {
                     }
                     logger.info("READ of " + dsz.strValue() + ": MDR now has value $" + MDR);
                 }
-                else { // RW false: Write = copy an element from the CPU to memory
+                else { // RW false = Write = copy an element from the CPU to memory
                     switch (dsz) {
                         case byteSize -> {
                             memory[MAR] = (byte) ( MDR % 0x100 ); // LSB: 8 last bits
@@ -477,67 +483,15 @@ class Sim68k {
     // Read into memory a machine language program contained in a file
     /// fetch and execute
     class Controller {
-        //    public:
-        /// Constructor
-        Controller()
+        Controller() {
 //        : mem(mry), PC(0), OpCode(0), OpAddr1(0), OpAddr2(0), TMPD(0), TMPS(0), TMPR(0),
 //    C(false), V(false), Z(false), N(false), H(false), MAR(0), MDR(0), RW(false),
 //    DS(byteSize), OpId(0), numOprd(0), opcData(0), R1(0), R2(0),
 //    M1(DATA_REGISTER_DIRECT), M2(DATA_REGISTER_DIRECT), Sm(false), Dm(false), Rm(false)
-        { }
-
-//    boolean checkCond(boolean, String);
-
-        // check the status of boolean H
-//    boolean halt();
-
-        // return the "number of bytes"
-//    byte numBytes(dataSize);
-
-        // Determines the format of the instruction: return True if F1, False if F2
-//    boolean formatF1(byte);
-
-        // Fetch the OpCode from memory
-//    void fetchOpCode();
-
-        // Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and Data according to given format.
-        // Uses getBits()
-//    void decodeInstr();
-
-        // Fetch the operands, according to their number (numOprd) & addressing modes (M1 or M2)
-//    void fetchOperands();
-
-        // Status booleans Z & N are often set the same way in many instructions
-        // A function would be useful to do this
-//    void setZN(final int);
-
-        // The calculations to find V & C are more complex but are simplified by the use of Sm, Dm, Rm
-        // It would be a good Idea to make a procedure to find these values
-//    void setSmDmRm(final int, final int, final int);
-
-        /****************************************************************************
-         Since many instructions will make local fetches between temporary registers
-         (TMPS, TMPD, TMPR) & memory or the Dn & An registers it would be
-         useful to create procedures to transfer the shorts/bytes between them.
-         Here are 2 suggestions of procedures to do this.
-         *****************************************************************************/
-/*
-    // Transfer data in the required temporary register
-    void fillTmpReg( int*   ,  // tmp Register to modify - TMPS, TMPD or TMPR
-                     short        ,  // address of Operand (OpAddr1 | OpAddr2), for addressMode 3
-                     dataSize    ,  // Data Size
-                     addressmode ,  // required Addressing Mode
-                     byte        ); // Register number for A[n] or D[n]
-
-    // Transfer the contents of temporary register to Register OR Memory
-    void setResult( int    ,  // Source Register (TMPD...)
-                    short        ,  // Operand Address (OpAddr1...)
-                    dataSize    ,  // Data Size
-                    addressmode ,  // required Addressing Mode
-                    byte        ); // Register Number for A[n] or D[n]
-*/
-        /// The execution of each instruction is done via its micro-program
-//    void execInstr();
+            TempReg trDest = new TempReg();
+            TempReg trSrc = new TempReg();
+            TempReg trResult = new TempReg();  // Temporary Registers Dest, Src, Result
+        }
 
         boolean  RW  ;  // read/write
         DataSize DS ; // byte, short, long
@@ -553,19 +507,8 @@ class Sim68k {
         // Most Significant Bits of TMPS, TMPD, & TMPR
         boolean Sm, Dm, Rm ;
 
-        // Transfer data to the specified temporary register
-        void fillTmpReg(
-//                int*   pReg,     // tmp Register to modify - TMPS, TMPD or TMPR
-                short        opAddrNo, // address of Operand (OpAddr1 | OpAddr2), for addressMode 3
-                DataSize dsz,      // Data Size
-                AddressMode mode,     // required Addressing Mode
-                byte        regNo   ) // Register number for A[n] or D[n]
-        {
-            RW = true ;
-        }
-
         // Generic error verification function, with message display
-        /**  Generic error verification function, with message display,
+        /*  Generic error verification function, with message display,
          *  if Cond is False, display an error message (including the OpName)
          *  The Halt Status boolean will also be set if there is an Error
          */
@@ -649,81 +592,12 @@ class Sim68k {
                 logger.severe("*** ERROR >> INVALID number of operands for " + Mnemo[OpId] + " at PC = " + (PC-2));
                 H = true ;
             }
-
-        }
-
-        // Transfer the contents of temporary register to Register OR Memory
-        void setResult(
-                int    tmpReg,   // Source Register (TMPD...)
-                short        OpAddrNo, // Operand Address (OpAddr1...)
-                DataSize dsz,      // Data Size
-                AddressMode mode,     // required Addressing Mode
-                byte        RegNo )   // Register Number for A[n] or D[n]
-        {
-            RW = false ;
-
-            // Depends on Addressing Mode
-            switch( mode )
-            {
-                case DATA_REGISTER_DIRECT:
-                    switch (dsz) {
-                        case byteSize -> {
-                            DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)tmpReg);
-                        } case wordSize -> {
-                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(tmpReg, LEAST) );
-                        } case longSize -> DR[RegNo] = tmpReg;
-                        default -> {
-                            logger.severe( "*** ERROR >> INVALID data size '" + dsz + "' at PC = " + ( PC - 2 ) );
-                            H = true;
-                        }
-                    }
-                    break;
-
-                case ADDRESS_REGISTER_DIRECT:
-                    AR[RegNo] = getWord( tmpReg, LEAST );
-                    break;
-
-                case RELATIVE_ABSOLUTE:
-                    // We need to access memory, except for branching & MOVA.
-                    MAR = OpAddrNo;
-                    MDR = tmpReg;
-                    mem.access( dsz, RW );
-                    break;
-
-                case ADDRESS_REGISTER_INDIRECT:
-                    // We need to access memory.
-                    MAR = AR[RegNo];
-                    MDR = tmpReg;
-                    mem.access( dsz, RW );
-                    break;
-
-                case ADDRESS_REGISTER_INDIRECT_POSTINC:
-                    // We need to access memory.
-                    // ATTENTION: for some instructions, the address register has already been incremented by fillTmpReg()
-                    // DO NOT increment it a 2nd time here
-                    MAR = (short) (AR[RegNo] - dsz.sizeValue());
-                    MDR = tmpReg;
-                    mem.access( dsz, RW );
-                    break;
-
-                case ADDRESS_REGISTER_INDIRECT_PREDEC:
-                    // We need to access memory.
-                    // ATTENTION: for some instructions, the address register has already been decremented by fillTmpReg
-                    // DO NOT decrement it a 2nd time here
-                    MAR = AR[RegNo];
-                    MDR = tmpReg;
-                    mem.access( dsz, RW );
-                    break;
-
-                default: // invalid addressMode
-                         logger.severe("*** ERROR >> INVALID Addressing Mode '" + mode + "' at PC = " + (PC-2));
-                         H = true ;
-            }
         }
 
         // set Status bits Z & N
-        void setZN( int tmpReg )
+        void setZN( TempReg tr )
         {
+            int tmpReg = tr.get();
             switch (DS) {
                 case byteSize -> {
                     Z = getBits( getWord( tmpReg, LEAST ), 0, 7 ) == 0;
@@ -745,27 +619,25 @@ class Sim68k {
         }
 
         // The calculations for V & C are easier with these values
-        void setSmDmRm( int tmpSrc, int tmpDst, int tmpRes )
-        {
+        void setSmDmRm( TempReg trS, TempReg trD, TempReg trR ) {
+            int tmpSrc = trS.get();
+            int tmpDst = trD.get();
+            int tmpRes = trR.get();
             byte mostSigBit = 15 ; // shortSize
-            switch( DS )
-            {
+            switch( DS ) {
                 case byteSize: mostSigBit =  7 ; break;
                 case wordSize: break;
                 case longSize: mostSigBit = 31 ; break;
-
                 default: logger.severe("*** ERROR >> INVALID data size '" + DS + "' at PC = " + (PC-2));
                          H = true ;
             }
-
             Sm = ( getBits( (short) tmpSrc, mostSigBit, mostSigBit) == 1 );
             Dm = ( getBits( (short) tmpDst, mostSigBit, mostSigBit) == 1 );
             Rm = ( getBits( (short) tmpRes, mostSigBit, mostSigBit) == 1 );
         }
 
         //  The execution of each instruction is done via its micro-program
-        void execInstr()
-        {
+        void execInstr() {
             byte i ; // counter
             short tmpA ;
             String input ;
@@ -776,199 +648,193 @@ class Sim68k {
 
     /* Execute the instruction according to opCode
        Use a CASE structure where each case corresponds to an instruction & its micro-program  */
-            switch( OpId )
-            {
+            switch( OpId ) {
                 // addition
                 case iADD:
                     /* EXAMPLE micro-program according to step 2.4.1 in section 3  */
                     // 1. Fill TMPS if necessary
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
                     // 2. Fill TMPD if necessary
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
                     // 3. Compute TMPR using TMPS & TMPD
-                    TMPR = TMPS + TMPD ;
-                    logger.info("TMPR($" + TMPR + ") = TMPS($" + TMPS + ") + TMPD($" + TMPD + ")");
+                    trResult.add( trSrc, trDest );
+                    logger.info("TMPR($" + trResult + ") = TMPS($" + trSrc + ") + TMPD($" + trDest + ")");
                     // 4. Update status bits HZNVC if necessary
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
                     // 5. Store the result in the destination if necessary
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break ;
                 // add quick
                 case iADDQ:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPS = 0 ;
-                    TMPS = setByte( TMPS, twobits.byte0, opcData );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trSrc.set( 0 );
+                    trSrc.set( setByte(trSrc.get(), twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    TMPR = TMPD + TMPS ;
+                    trResult.add( trDest, trSrc );
                     
-                    logger.info("TMPR($" + TMPR + ") = TMPS($" + TMPS + ") + TMPD($" + TMPD + ")");
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    logger.info("TMPR($" + trResult + ") = TMPS($" + trSrc + ") + TMPD($" + trDest + ")");
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // subtraction
                 case iSUB:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD - TMPS ;
-                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") - TMPS($" + TMPS + ")");
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.subtract( trDest, trSrc );
+                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") - TMPS($" + trSrc + ")");
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // sub quick
                 case iSUBQ:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPS = 0;
-                    TMPS = setByte( TMPS, twobits.byte0, opcData );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trSrc.set( 0 );
+                    trSrc.set( setByte(trSrc.get(), twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    TMPR = TMPD - TMPS;
-                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") - TMPS($" + TMPS + ")");
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    trResult.subtract( trDest, trSrc );
+                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") - TMPS($" + trSrc + ")");
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // signed
                 case iMULS:
                     if( checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) )
                     {
-                        fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                        fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                        if( getBits( (short)TMPS, 15, 15) == 1 )
-                            TMPS = TMPS | 0xFFFF0000 ;
-                        if( getBits( (short)TMPD, 15, 15) == 1 )
-                            TMPD = TMPD | 0xFFFF0000 ;
-                        TMPR = TMPD * TMPS;
-                        logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") * TMPS($" + TMPS + ")");
-                        setZN( TMPR );
+                        trSrc.fill( OpAddr1, DS, M1, R1 );
+                        trDest.fill( OpAddr2, DS, M2, R2 );
+                        if( getBits( (short) trSrc.get(), 15, 15) == 1 )
+                            trSrc.set( trSrc.get() | 0xFFFF0000 );
+                        if( getBits( (short) trDest.get(), 15, 15) == 1 )
+                            trDest.set( trDest.get() | 0xFFFF0000 );
+                        trResult.multiply( trDest, trSrc );
+                        logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") * TMPS($" + trSrc + ")");
+                        setZN( trResult );
                         V = false;
                         C = false;
-                        setResult( TMPR, OpAddr2, DataSize.longSize, M2, R2 );
+                        trResult.setResult( OpAddr2, DataSize.longSize, M2, R2 );
                     }
                     break;
                 // signed
                 case iDIVS:
                     if( checkCond( (DS == DataSize.longSize), "Invalid Data Size" ) )
                     {
-                        fillTmpReg( &TMPS, OpAddr1, DataSize.wordSize, M1, R1);
+                        trSrc.fill( OpAddr1, DataSize.wordSize, M1, R1);
                         
-                        logger.info("TMPS = $" + TMPS);
-                        if( checkCond( (TMPS != 0), "Division by Zero" ) )
+                        logger.info("TMPS = $" + trSrc );
+                        if( checkCond( ( trSrc.get() != 0), "Division by Zero" ) )
                         {
-                            fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                            logger.info("TMPD = $" + TMPD);
-                            V = ( (TMPD / TMPS) < -32768 ) | ( (TMPD / TMPS) > 32767 );
-                            if( TMPS > 0x8000 ) {
+                            trDest.fill( OpAddr2, DS, M2, R2 );
+                            logger.info("TMPD = $" + trDest );
+                            V = ( ( trDest.get() / trSrc.get() ) < -32768 ) | ( ( trDest.get() / trSrc.get() ) > 32767 );
+                            if( trSrc.get() > 0x8000 ) {
                                 i = 1;
-                                TMPS = (TMPS ^ 0xFFFF) + 1;
-                                TMPD = ~TMPD + 1;
+                                trSrc.set( (trSrc.get() ^ 0xFFFF) + 1 );
+                                trDest.set( ~(trDest.get()) + 1 );
                             };
                             
-                            logger.info("TMPS = $" + TMPS + "; TMPD = $" + TMPD);
-                            if( ((TMPD / TMPS) == 0) && (i == 1) ) {
-                                TMPR = setWord( TMPR, LEAST, (short) 0 );
-                                logger.info("TMPR = $" + TMPR);
-                                TMPD = ~TMPD + 1 ;
-                                logger.info("TMPD = $" + TMPD);
-                                TMPR = setWord( TMPR, MOST, (short) (TMPD % TMPS) );
-                                logger.info("TMPR = $" + TMPR);
+                            logger.info("TMPS = $" + trSrc + "; TMPD = $" + trDest );
+                            if( (( trDest.get() / trSrc.get() ) == 0) && (i == 1) ) {
+                                trResult.set( setWord(trResult.get(), LEAST, (short)0) );
+                                logger.info("TMPR = $" + trResult );
+                                trDest.set( ~(trDest.get()) + 1 );
+                                logger.info("TMPD = $" + trDest );
+                                trResult.set( setWord(trResult.get(), MOST, (short)(trDest.get() % trSrc.get())) );
                             }
                             else {
-                                TMPR = TMPD / getWord(TMPS, LEAST);
-                                logger.info("TMPR = $" + TMPR);
-                                setWord( &TMPR, MOST, (TMPD % getWord(TMPS, LEAST)) );
-                                logger.info("TMPR = $" + TMPR);
-                            };
-                            logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") / TMPS($" + TMPS + ")");
-                            setZN( TMPR );
+                                trResult.set( trDest.get() / getWord(trSrc.get(), LEAST) );
+                                logger.info("TMPR = $" + trResult );
+                                trResult.set( setWord(trResult.get(), MOST, (short)(trDest.get() % getWord(trSrc.get(), LEAST))) );
+                            }
+                            logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") / TMPS($" + trSrc + ")");
+                            setZN( trResult );
                             C = false ;
-                            setResult( TMPR, OpAddr2, DS, M2, R2 );
+                            trResult.setResult( OpAddr2, DS, M2, R2 );
                         }
                     }
                     break;
                 // negate
                 case iNEG:
-                    fillTmpReg( &TMPD, OpAddr1, DS, M1, R1 );
-                    TMPR = -TMPD;
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    trDest.fill( OpAddr1, DS, M1, R1 );
+                    trResult.set( trDest.get() * -1 );
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = Dm & Rm ;
                     C = Dm | Rm ;
-                    setResult( TMPR, OpAddr1, DS, M1, R1 );
+                    trResult.setResult( OpAddr1, DS, M1, R1 );
                     break;
                 // clear
                 case iCLR:
-                    TMPD = 0 ;
-                    setZN( TMPD );
+                    trDest.set( 0 );
+                    setZN( trDest );
                     V = false;
                     C = false;
-                    setResult( TMPD, OpAddr1, DS, M1, R1 );
+                    trDest.setResult( OpAddr1, DS, M1, R1 );
                     break;
                 // bitwise
                 case iNOT:
-                    fillTmpReg( &TMPD, OpAddr1, DS, M1, R1 );
-                    TMPR = ~TMPD ;
-                    setZN( TMPR );
+                    trDest.fill( OpAddr1, DS, M1, R1 );
+                    trResult.set( ~(trDest.get()) );
+                    setZN( trResult );
                     V = false;
                     C = false;
-                    setResult( TMPR, OpAddr1, DS, M1, R1 );
+                    trResult.setResult( OpAddr1, DS, M1, R1 );
                     break;
                 // bitwise
                 case iAND:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD & TMPS ;
-                    
-                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") & TMPS($" + TMPS + ")");
-                    setZN( TMPR );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.set( trDest.get() & trSrc.get() );
+                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") & TMPS($" + trSrc + ")");
+                    setZN( trResult );
                     V = false;
                     C = false;
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // bitwise
                 case iOR:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD | TMPS ;
-                    
-                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") | TMPS($" + TMPS + ")");
-                    setZN( TMPR );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.set( trDest.get() | trSrc.get() );
+                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") | TMPS($" + trSrc + ")");
+                    setZN( trResult );
                     V = false;
                     C = false;
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // xor
                 case iEOR:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD ^ TMPS;
-                    
-                    logger.info("TMPR($" + TMPR + ") = TMPD($" + TMPD + ") ^ TMPS($" + TMPS + ")");
-                    setZN( TMPR );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.set( trDest.get() ^ trSrc.get() );
+                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") ^ TMPS($" + trSrc + ")");
+                    setZN( trResult );
                     V = false;
                     C = false;
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // shift left
                 case iLSL:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD + opcData;
-                    setZN( TMPR );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.set( trDest.get() + opcData );
+                    setZN( trResult );
                     V = false;
                     if( opcData > 0 )
-                        C = getBits( (short) TMPD, DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
+                        C = getBits( (short)trDest.get(), DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
                     else
                         C = false;
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // shift right
                 case iLSR:
@@ -980,56 +846,57 @@ class Sim68k {
                      TMPR = TMPS & !( 0x80000000 >> (opcData-1) ) as the constant 0x80000000 is NOT extended!
                      Instead, need to put 0x80000000 in a register and proceed as below:
                      */
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    logger.info("TMPD = $" + TMPD + "; opcData = " + opcData);
-                    TMPS = 0x80000000 ;
-                    TMPR = TMPS >> (opcData-1) ;
-                    logger.info("TMPS = $" + TMPS + "; TMPR = TMPS >> " + (opcData-1) + " = $" + TMPR);
-                    TMPS = ~TMPR ;
-                    logger.info("TMPS = !TMPR = $" + TMPS);
-                    TMPR = (TMPD >> opcData) & TMPS ;
-                    setZN( TMPR );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    logger.info("TMPD = $" + trDest + "; opcData = " + opcData);
+                    trSrc.set( 0x80000000 );
+                    trResult.set( trSrc.get() >> (opcData-1) );
+                    logger.info("TMPS = $" + trSrc + "; TMPR = TMPS >> " + (opcData-1) + " = $" + trResult );
+                    trSrc.set( ~(trResult.get()) );
+                    logger.info("TMPS = !TMPR = $" + trSrc );
+                    trResult.set( (trDest.get() >> opcData) & trSrc.get() );
+                    setZN( trResult );
                     V = false;
-                    C = opcData > 0 && ( getBits( (short) TMPD, opcData - 1, opcData - 1 ) == 1 );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    C = (opcData > 0) && ( getBits( (short)trDest.get(), opcData - 1, opcData - 1 ) == 1 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate left
                 case iROL:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
                     opcData = (byte) (opcData % (8 * DS.sizeValue() ));
-                    TMPR = TMPD + opcData ;
-                    TMPS = TMPD >> ( (8*DS.sizeValue()) - opcData );
-                    TMPR = setBits( TMPR, (byte)0, (byte)(opcData-1), (short)TMPS );
-                    setZN( TMPR );
+                    trResult.set( trDest.get() + opcData );
+                    trSrc.set( trDest.get() >> ((8*DS.sizeValue()) - opcData) );
+                    trResult.set( setBits( trResult.get(), (byte)0, (byte)(opcData-1), (short)trSrc.get()) );
+                    setZN( trResult );
                     V = false;
-                    C = opcData > 0 && ( getBits( (short) TMPD, ( DS.sizeValue() * 8 ) - opcData, ( DS.sizeValue() * 8 ) - opcData ) == 1 );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    C = (opcData > 0)
+                        && ( getBits( (short)trDest.get(), (DS.sizeValue() * 8)-opcData, (DS.sizeValue()*8)-opcData ) == 1 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate right
                 case iROR:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
                     opcData = (byte) (opcData % ( 8*DS.sizeValue() ));
-                    TMPR = TMPD >> opcData;
-                    TMPR = setBits( TMPR, (byte)(8*DS.sizeValue() - opcData), (byte)(8*DS.sizeValue()-1), (short)TMPD );
-                    setZN( TMPR );
+                    trResult.set( trDest.get() >> opcData );
+                    trResult.set( setBits( trResult.get(), (byte)(8*DS.sizeValue()-opcData), (byte)(8*DS.sizeValue()-1), (short)trDest.get()) );
+                    setZN( trResult );
                     V = false;
-                    C = opcData > 0 && ( getBits( (short) TMPD, opcData - 1, opcData - 1 ) == 1 );
-                    setResult( TMPR, OpAddr2, DS, M2, R2 );
+                    C = (opcData > 0) && ( getBits( (short)trDest.get(), opcData - 1, opcData - 1 ) == 1 );
+                    trResult.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // compare
                 case iCMP:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPR = TMPD - TMPS ;
-                    setZN( TMPR );
-                    setSmDmRm( TMPS, TMPD, TMPR );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trResult.subtract( trDest, trSrc );
+                    setZN( trResult );
+                    setSmDmRm( trSrc, trDest, trResult );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
                     break;
                 // test
                 case iTST:
-                    fillTmpReg( &TMPD, OpAddr1, DS, M1, R1 );
-                    setZN( TMPD );
+                    trDest.fill( OpAddr1, DS, M1, R1 );
+                    setZN( trDest );
                     V = false ;
                     C = false ;
                     break;
@@ -1071,28 +938,29 @@ class Sim68k {
                     break;
                 // move
                 case iMOV:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                    setResult( TMPS, OpAddr2, DS, M2, R2 );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    trSrc.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // move quick
                 case iMOVQ:
-                    fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                    TMPD = setByte( TMPD, twobits.byte0, opcData );
+                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    trDest.set( setByte(trDest.get(), twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    setZN( TMPD );
+                    setZN( trDest );
                     V = false;
                     C = false;
-                    setResult( TMPD, OpAddr2, DS, M2, R2 );
+                    trDest.setResult( OpAddr2, DS, M2, R2 );
                     break;
                 // exchange
                 case iEXG:
-                    if( checkCond( ((M1 <= ADDRESS_REGISTER_DIRECT) && (M2 <= ADDRESS_REGISTER_DIRECT)),
+                    if( checkCond( ((M1 == AddressMode.ADDRESS_REGISTER_DIRECT || M1 == AddressMode.DATA_REGISTER_DIRECT)
+                                    && (M2 == AddressMode.ADDRESS_REGISTER_DIRECT || M2 == AddressMode.DATA_REGISTER_DIRECT)),
                             "Invalid Addressing Mode" ) )
                     {
-                        fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
-                        fillTmpReg( &TMPD, OpAddr2, DS, M2, R2 );
-                        setResult( TMPS, OpAddr1, DS, M2, R2 );
-                        setResult( TMPD, OpAddr2, DS, M1, R1 );
+                        trSrc.fill( OpAddr1, DS, M1, R1 );
+                        trDest.fill( OpAddr2, DS, M2, R2 );
+                        trSrc.setResult( OpAddr1, DS, M2, R2 );
+                        trDest.setResult( OpAddr2, DS, M1, R1 );
                         V = false;
                         C = false;
                     }
@@ -1102,11 +970,12 @@ class Sim68k {
                     if( checkCond( ((M1 == AddressMode.RELATIVE_ABSOLUTE) && (M2 == AddressMode.ADDRESS_REGISTER_DIRECT)),
                             "Invalid Addressing Mode" )
                             && checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) )
-                        setResult( OpAddr1, OpAddr2, DS, M2, R2 );
+//                        setResult( OpAddr1, OpAddr2, DS, M2, R2 );
+                        AR[R2] = getWord( OpAddr1, LEAST );
                     break;
                 // input
                 case iINP:
-                    logger.info("Enter a value ";
+                    logger.info("Enter a value ");
                     switch (DS) {
                         case byteSize -> logger.info( "(" + DataSize.byteSize.sizeValue() + ") for " );
                         case wordSize -> logger.info( "(" + DataSize.wordSize.sizeValue() + ") for " );
@@ -1146,17 +1015,17 @@ class Sim68k {
                      * Use strtoull() to ensure the maximum size to store our input without problems interpreting sign.
                      * Seems to work, so far, for both Linux x86_64 and Windows x64...
                      */
-                    TMPD = (int)strtoull( input.c_str(), (char**)NULL, 0 );
+                    trDest = (int)strtoull( input.c_str(), (char**)NULL, 0 );
                     if( nDebugLevel > 0)
-                        logger.info("TMPD == $" + TMPD);
-                    setZN( TMPD );
+                        logger.info("TMPD == $" + trDest );
+                    setZN( trDest );
                     C = false;
                     V = false;
-                    setResult( TMPD, OpAddr1, DS, M1, R1 );
+                    setResult( trDest, OpAddr1, DS, M1, R1 );
                     break;
                 // display
                 case iDSP:
-                    fillTmpReg( &TMPS, OpAddr1, DS, M1, R1 );
+                    trSrc.fill( OpAddr1, DS, M1, R1 );
                     switch (M1) {
                         case DATA_REGISTER_DIRECT -> logger.info( "[ D" + (int) R1 + " ]  = " );
                         case ADDRESS_REGISTER_DIRECT -> logger.info( "[ A" + (int) R1 + " ]  = " );
@@ -1175,9 +1044,9 @@ class Sim68k {
                         }
                     }
                     switch (DS) {
-                        case byteSize -> logger.info( "$" + ( TMPS & 0xff ) + " (" + DataSize.byteSize.sizeValue() + ")" );
-                        case wordSize -> logger.info( "$" + ( TMPS & 0xffff ) + " (" + DataSize.wordSize.sizeValue() + ")" );
-                        case longSize -> logger.info( "$" + TMPS + " (" + DataSize.longSize.sizeValue() + ")" );
+                        case byteSize -> logger.info( "$" + ( trSrc.get() & 0xff ) + " (" + DataSize.byteSize.sizeValue() + ")" );
+                        case wordSize -> logger.info( "$" + ( trSrc.get() & 0xffff ) + " (" + DataSize.wordSize.sizeValue() + ")" );
+                        case longSize -> logger.info( "$" + trSrc + " (" + DataSize.longSize.sizeValue() + ")" );
                         default -> {
                             logger.severe( "\n*** ERROR >> INVALID data size '" + DS
                                     + "' for instruction '" + Mnemo[OpId] + "' at PC = " + ( PC - 2 ) );
