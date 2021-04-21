@@ -9,6 +9,7 @@
  ********************************************************************************/
 
 import java.text.DateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.logging.*;
@@ -257,7 +258,10 @@ public class LogControl {
             LOGFILE_MAX_BYTES = 1024 * 1024;
 
     /** {@link Level} to print initialization messages = Level.SEVERE */
-    static final Level INIT_LEVEL = Level.SEVERE;
+    static final Level INIT_LEVEL = Level.CONFIG;
+
+    /** {@link Level} to print initialization messages = Level.SEVERE */
+    static final Level ERROR_LEVEL = Level.WARNING;
 
     /** default {@link Level} for <b>file</b> logging if NO value passed to Constructor from main class */
     static final Level DEFAULT_FILE_LEVEL = Level.CONFIG;
@@ -338,6 +342,28 @@ class MhsLogger extends Logger {
         MhsLogger $logger = new MhsLogger(name, null);
         LogManager.getLogManager().addLogger($logger);
         return $logger;
+    }
+
+    /**
+     * Prepare and send a customized {@link LogRecord} for an ERROR condition
+     * @param msg the text to insert in the {@link LogRecord}
+     */
+    protected void logError(final String msg, int offset) {
+        System.err.println( Arrays.toString(Thread.currentThread().getStackTrace()) );
+        int lineNum = Thread.currentThread().getStackTrace()[2+offset].getLineNumber();
+        if( (callclass == null) || (callmethod == null) ) {
+            getCallerClassAndMethodName();
+        }
+        LogRecord $logRec = getRecord( LogControl.ERROR_LEVEL, "LINE #" + lineNum + MhsFormatter.NLN + msg );
+        sendRecord($logRec);
+    }
+
+    /**
+     * Prepare and send a customized {@link LogRecord} for an ERROR condition
+     * @param msg the text to insert in the {@link LogRecord}
+     */
+    protected void logError(final String msg) {
+        logError( msg, 1 );
     }
 
     /**
