@@ -134,9 +134,11 @@ class Sim68k {
         return null ;
     }
 
-    final int memorySize = 0x1001 ; // hex values 0x0000 to 0x1000
+    /** hex values 0x0000 to 0x1000 */
+    final int memorySize = 0x1001 ;
 
-    static String[] Mnemo ; // Mnemonic String for opCodes
+    /** Mnemonic String for opCodes */
+    static String[] Mnemo ;
 
     /**
      * Logging management
@@ -156,64 +158,77 @@ class Sim68k {
     private Memory mem;
 
     // The CPU registers
-    short PC ;               // Program Counter
-    short OpCode ;           // OPCODE of the current instruction
-    short OpAddr1, OpAddr2 ; // Operand Addresses
+    /** Program Counter */
+    short PC ;
+    /** OPCODE of the current instruction */
+    short OpCode ;
+    /** Operand Addresses */
+    short OpAddr1, OpAddr2 ;
 
     // status bits
-    boolean C ; // Carry
-    boolean V ; // Overflow
-    boolean Z ; // Zero
-    boolean N ; // Negative
-    boolean H ; // Halt
+    /** Carry */
+    boolean C ;
+    /** Overflow */
+    boolean V ;
+    /** Zero */
+    boolean Z ;
+    /** Negative */
+    boolean N ;
+    /** Halt program execution */
+    boolean H ;
 
-      int[] DR; // two Data Registers
-    short[] AR; // two Address Registers
+    /** two Data Registers */
+      int[] DR;
+    /** two Address Registers */
+    short[] AR;
 
-    short MAR ; // Memory Address Register
-    int   MDR ; // Memory Data Register
+    /** Memory Address Register */
+    short MAR ;
+    /** Memory Data Register */
+    int   MDR ;
 
-    TempReg trDest, trSrc, trResult;  // Temporary Registers Dest, Src, Result
+    /** Temporary Registers Dest, Src, Result */
+    TempReg TMPD, TMPS, TMPR;
 
-    /**
+    /*
      ***************************************************************************
 
      Functions for bit manipulation.
-
+     ==============================
      Pascal, unlike C, does not have operators that allow easy manipulation
      of bits within a byte or short. The following procedures and functions
      are designed to help you manipulate (extract and set) the bits.
      You may use or modify these procedures/functions or create others.
 
-     ****************************************************************************/
+     *************************************************************************** */
 
-    /* Returns a subString of bits between FirstBit and LastBit from wV
-       Ex:
+    /** Returns a subString of bits between FirstBit and LastBit from wV
+        Ex:
           Bit Positions:      1111 11
               (15..0)         5432 1098 7654 3210
           wV = 0x1234      =  0001 0010 0011 0100
           FirstBit = 3, LastBit = 9
-          The bits from 3 to 9 are: 10 0011 0
+          The bits from 3 to 9 are:  10 0011 0
           The function returns 0x0046 (0000 0000 0100 0110)  */
     short getBits( final short wV, final int FirstBit, final int LastBit) {
         return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
     }
 
-    // Gets one word from nV
-    // MSW: false = Least Significant Word, true = Most Significant Word
+    /** Gets one word from nV
+        MSW: false = Least Significant Word, true = Most Significant Word */
     short getWord( final int nV, boolean MSW) {
         if( MSW )
             return (short)( (nV & 0xFFFF0000) >> 16 );
         return (short)( nV & 0x0000FFFF );
     }
 
-    // Sets the bit of pnV indicated by posn to val (false or true)
+    /** Sets the bit of pnV indicated by posn to val (false or true) */
     int setBit(int pnV, final short posn, final boolean val) {
         byte bt = (val) ? (byte)1 : (byte)0 ;
         return (pnV & (0xFFFFFFFF - (1 << posn))) | (bt << posn) ;
     }
 
-    // Sets the bits of pnV between first and last to the least significant bits of val
+    /** Sets the bits of pnV between first and last to the least significant bits of val */
     int setBits(int pnV, final byte first, final byte last, final short val) {
         short pos;
         int result = pnV;
@@ -222,7 +237,7 @@ class Sim68k {
         return result;
     }
 
-    // Sets one byte of pnV indicated by posn to val
+    /** Sets one byte of pnV indicated by posn to val */
     int setByte(int pnV, final twobits posn, final byte val) {
         switch (posn) {
             case byte0 -> { return (pnV & 0xFFFFFF00) | val; }
@@ -233,19 +248,19 @@ class Sim68k {
         return 0; // should NEVER reach here
     }
 
-    // Sets one word of pnV indicated by MSW to val
-    // MSW: false = Least Significant Word, true = Most Significant Word
+    /** Sets one word of pnV indicated by MSW to val
+        MSW: false = Least Significant Word, true = Most Significant Word */
     int setWord(int pnV, final boolean MSW, final short val) {
         if( MSW )
             return (pnV & 0x0000FFFF) | (val << 16) ;
         return (pnV & 0xFFFF0000) | val ;
     }
 
-/**
+/*
  *  INNER CLASSES
- *=========================================================================================================*/
+ *========================================================================================================= */
 
-//    int TMPD, TMPS, TMPR ;  // Temporary Registers Dest, Src, Result
+    /** Temporary Registers */
     class TempReg {
         TempReg() {
             logger.logInit();
@@ -253,7 +268,8 @@ class Sim68k {
         private int value;
 
         void set(int val) { value = val; }
-        int get() {return value; }
+        int get() { return value; }
+        String hex() { return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) ); }
 
         void add(TempReg trA, TempReg trB) { set( trA.get() + trB.get() ); }
         void subtract(TempReg trA, TempReg trB) { set( trA.get() - trB.get() ); }
@@ -266,6 +282,7 @@ class Sim68k {
      Here are 2 suggestions of procedures to do this.
      **************************************************************************** */
 
+    /** Transfer the contents of a Register OR Memory to a temporary register */
     void fill(
 //            int*   pReg,     // tmp Register to modify - TMPS, TMPD or TMPR
             short       opAddrNo, // address of Operand (OpAddr1 | OpAddr2), for addressMode 3
@@ -273,7 +290,7 @@ class Sim68k {
             AddressMode mode,     // required Addressing Mode
             byte        regNo   ) // Register number for A[n] or D[n]
         {
-            logger.info( "" );
+            logger.info( "OpAddrNo = " + opAddrNo + "; dsz = " + dsz.strValue() + "; adrMode = " + mode + "; RegNo = " + regNo );
             switch (mode) {
                 case DATA_REGISTER_DIRECT -> {
 //                        *pReg = DR[regNo];
@@ -317,7 +334,7 @@ class Sim68k {
             }
         }
 
-    // Transfer the contents of temporary register to Register OR Memory
+    /** Transfer the contents of temporary register to Register OR Memory */
     void write(
 //            int    tmpReg,   // Source Register (TMPD...)
             short       OpAddrNo, // Operand Address (OpAddr1...)
@@ -325,7 +342,7 @@ class Sim68k {
             AddressMode mode,     // required Addressing Mode
             byte        RegNo )   // Register Number for A[n] or D[n]
     {
-        logger.info( "" );
+        logger.info( "OpAddrNo = " + OpAddrNo + "; dsz = " + dsz.strValue() + "; adrMode = " + mode + "; RegNo = " + RegNo );
         switch( mode ) {
             case DATA_REGISTER_DIRECT:
                 switch (dsz) {
@@ -350,8 +367,8 @@ class Sim68k {
                 mem.access( dsz, WRITE );
                 break;
 
+            // We need to access memory
             case ADDRESS_REGISTER_INDIRECT:
-                // We need to access memory
             case ADDRESS_REGISTER_INDIRECT_PREDEC:
                 // ATTENTION: for some instructions, the address register has already been decremented by fillTmpReg
                 // DO NOT decrement it a 2nd time here
@@ -376,26 +393,27 @@ class Sim68k {
     }
 }
 
-    /// store information
+    /** store information */
     class Memory {
         Memory() {
             logger.logInit();
             memory = new byte[memorySize];
         }
 
-        private final byte[] memory; // store the binary program
+        /** store the binary program */
+        private final byte[] memory;
 
-        // load the binary program to memory
+        /** load the binary program to memory */
         void load( short location, byte data ) {
-            logger.info("Read value $" + data + " into memory at location: " + location);
+            logger.fine("Read value $" + data + " into memory at location: " + location);
             memory[location] = data ;
         }
 
-        /*  Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory.
-         *  Verifies if we are trying to access an address outside the range allowed for addressing [0x0000..0x1000].
-         *  Uses the RW (read|write) boolean.
+        /**
+         *  Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory.
+         *  Verifies if we are trying to access an address outside the allowed range [0x0000..0x1000].
+         *  Uses an RW (read|write) boolean.
          *  Parameter dsz determines the data size (byte, short, int/long).
-         *  >> 2018-11-22: other parameters needed when put MAR, MDR, RW, H as Controller member variables
          */
         void access(DataSize dsz, boolean RW ) {
             if( MAR < memorySize ) { // valid Memory Address range
@@ -403,38 +421,41 @@ class Sim68k {
                     switch (dsz) {
                         case byteSize -> MDR = memory[MAR];
                         case wordSize -> MDR = memory[MAR] * 0x100 + memory[MAR + 1];
-                        case longSize -> MDR = ( ( memory[MAR] * 0x1000000 ) & 0xFF000000 ) |
-                                               ( ( memory[MAR + 1] * 0x10000 ) & 0x00FF0000 ) |
-                                               ( ( memory[MAR + 2] * 0x100 ) & 0x0000FF00 ) |
+                        case longSize -> MDR = ( (memory[MAR] * 0x1000000) & 0xFF000000 ) |
+                                               ( (memory[MAR + 1] * 0x10000) & 0x00FF0000 ) |
+                                               ( (memory[MAR + 2] * 0x100) & 0x0000FF00 ) |
                                                ( memory[MAR + 3] & 0x000000FF );
                         default -> {
                             logger.logError("*** ERROR >> INVALID data size: " + dsz.strValue());
                             H = true;
                         }
                     }
-                    logger.config("READ of " + dsz.strValue() + ": MDR now has value $" + Integer.toHexString(MDR));
+                    logger.info("READ of " + dsz.strValue() + ": MDR now has value $" + Integer.toHexString(MDR));
                 }
                 else { // RW false = Write = copy an element from the CPU to memory
                     switch (dsz) {
                         case byteSize -> {
-                            memory[MAR] = (byte) ( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.info( dsz.strValue() + " WRITE: memory[" + MAR + "] now has value $" + memory[MAR] );
+                            memory[MAR] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
+                            logger.info(dsz.strValue() + "WRITE: memory[" + MAR
+                                        + "] now has value $" + Integer.toHexString(memory[MAR]) );
                         }
                         case wordSize -> {
-                            memory[MAR] = (byte) ( ( MDR / 0x100 ) % 0x100 ); // MSB: 8 first bits
-                            memory[MAR + 1] = (byte) ( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.info( dsz.strValue() + " WRITE: memory[" + MAR + "] now has value $" + memory[MAR]
-                                    + "\t\t\tmemory[" + MAR + 1 + "] now has value $" + memory[MAR + 1] );
+                            memory[MAR]   = (byte)( (MDR / 0x100) % 0x100 ); // MSB: 8 first bits
+                            memory[MAR+1] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
+                            logger.info(dsz.strValue()
+                                        + "WRITE: memory[" + MAR + "] now has value $" + Integer.toHexString(memory[MAR])
+                                        + " and memory[" + (MAR+1) + "] now has value $" + Integer.toHexString(memory[MAR+1]));
                         }
                         case longSize -> {
-                            memory[MAR] = (byte) ( ( MDR >> 24 ) & 0x000000FF ); // MSB: 8 first bits
-                            memory[MAR + 1] = (byte) ( ( MDR >> 16 ) & 0x000000FF );
-                            memory[MAR + 2] = (byte) ( ( MDR >> 8 ) & 0x000000FF );
-                            memory[MAR + 3] = (byte) ( MDR % 0x100 );
-                            logger.info( dsz.strValue() + " WRITE: memory[" + MAR + "] now has value $" + memory[MAR]
-                                        + "\t\t\tmemory[" + MAR + 1 + "] now has value $" + memory[MAR + 1]
-                                        + "\t\t\tmemory[" + MAR + 2 + "] now has value $" + memory[MAR + 2]
-                                        + "\t\t\tmemory[" + MAR + 2 + "] now has value $" + memory[MAR + 3] );
+                            memory[MAR]   = (byte)( (MDR >> 24) & 0x000000FF ); // MSB: 8 first bits
+                            memory[MAR+1] = (byte)( (MDR >> 16) & 0x000000FF );
+                            memory[MAR+2] = (byte)( (MDR >> 8) & 0x000000FF );
+                            memory[MAR+3] = (byte)( MDR % 0x100 );
+                            logger.info(dsz.strValue()
+                                        + "WRITE: memory[" + MAR + "] now has value $" + Integer.toHexString(memory[MAR])
+                                        + "\t\t\tmemory[" + (MAR+1) + "] now has value $" + Integer.toHexString(memory[MAR+1])
+                                        + "\t\t\tmemory[" + (MAR+2) + "] now has value $" + Integer.toHexString(memory[MAR+2])
+                                        + "\t\t\tmemory[" + (MAR+3) + "] now has value $" + Integer.toHexString(memory[MAR+3]));
                         }
                         default -> {
                             logger.logError( "*** ERROR >> INVALID data size: " + dsz.strValue() );
@@ -450,26 +471,29 @@ class Sim68k {
         }
     }
 
-    // simulates fetch and execute
+    /** simulates fetch and execute */
     class Controller {
         Controller() {
-            trDest   = new TempReg();
-            trSrc    = new TempReg();
-            trResult = new TempReg(); // Temporary Registers Dest, Src, Result
+            TMPD = new TempReg();
+            TMPS = new TempReg();
+            TMPR = new TempReg(); // Temporary Registers Dest, Src, Result
         }
-
-        DataSize DS ; // byte, short, long
-
-        byte OpId ;    // numeric id for opCodes
-        byte numOprd ; // number of necessary operands = opCode bit P + 1
-        byte opcData ; // store data from opCode for Format F2
-
-        // temp storage for Register # (from opCode) for operands 1 & 2
-        byte R1, R2 ;
-        // temp storage for AddressMode (from opCode) for operands 1 & 2
-        AddressMode M1, M2 ;
-        // Most Significant Bits of TMPS, TMPD, & TMPR
+        /** Most Significant Bits of TMPS, TMPD and TMPR */
         boolean Sm, Dm, Rm ;
+
+        /** numeric id for opCodes */
+        byte OpId ;
+        /** number of necessary operands = opCode bit P+1 */
+        byte numOprd ;
+        /** store data from opCode for Format F2 */
+        byte opcData ;
+
+        /** byte, word or long */
+        DataSize DS ;
+        /** temp storage for Register # (from opCode) for operands 1 and 2 */
+        byte R1, R2 ;
+        /** temp storage for AddressMode (from opCode) for operands 1 and 2 */
+        AddressMode M1, M2 ;
 
         /**
          *  Generic error verification function, with message display:
@@ -484,7 +508,7 @@ class Sim68k {
             return false ;
         }
 
-        // Fetch the OpCode from memory
+        /** Fetch the OpCode from memory */
         void fetchOpCode() {
             logger.info("PC = " + PC);
             MAR = PC ;
@@ -493,8 +517,9 @@ class Sim68k {
             OpCode = getWord(MDR, LEAST); // get LSW from MDR
         }
 
-        // Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and opcData
+        /** Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and opcData */
         void decodeInstr() {
+            logger.info( "OpCode = " + Integer.toBinaryString(OpCode) );
             DS = getDataSize( getBits(OpCode, 9, 10) );
             OpId = (byte)getBits( OpCode, 11, 15 );
             numOprd = (byte)( getBits(OpCode, 8, 8) + 1 );
@@ -525,7 +550,7 @@ class Sim68k {
             logger.config("\t\t\t M1 = " + M1 + ", M2 = " + M2 + ", R1 = " + R1 + ", R2 = " + R2 + ", opcData = " + opcData);
         }
 
-        // Fetch the operands, according to their number (numOprd) & addressing modes (M1 or M2)
+        /** Fetch the operands, according to their number (numOprd) and addressing modes (M1 or M2) */
         void fetchOperands() {
             logger.config(numOprd + ": at PC = " + (PC-2) + " : M1 = " + M1 + ", M2 = " + M2);
 
@@ -553,7 +578,7 @@ class Sim68k {
             }
         }
 
-        // set Status bits Z & N
+        /** set Status bits Z (zero) and N (negative) */
         void setZN( TempReg tr ) {
             int trVal = tr.get();
             switch (DS) {
@@ -576,7 +601,7 @@ class Sim68k {
             }
         }
 
-        // The calculations for V & C are easier with these values
+        /** The calculations for V (overflow) and C (carry) are easier with these values */
         void setSmDmRm( TempReg trS, TempReg trD, TempReg trR ) {
             byte mostSigBit = 15 ; // wordSize
             switch( DS ) {
@@ -605,184 +630,183 @@ class Sim68k {
                 case iADD:
                     /* EXAMPLE micro-program according to step 2.4.1 in section 3  */
                     // 1. Fill TMPS if necessary
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
                     // 2. Fill TMPD if necessary
-                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
                     // 3. Compute TMPR using TMPS & TMPD
-                    trResult.add( trSrc, trDest );
-                    logger.info("TMPR($" + trResult + ") = TMPS($" + trSrc + ") + TMPD($" + trDest + ")");
+                    TMPR.add( TMPS, TMPD );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPS(" + TMPS.hex() + ") + TMPD(" + TMPD.hex() + ")");
                     // 4. Update status bits HZNVC if necessary
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
                     // 5. Store the result in the destination if necessary
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break ;
                 // add quick
                 case iADDQ:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trSrc.set( 0 );
-                    trSrc.set( setByte(trSrc.get(), twobits.byte0, opcData) );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPS.set( setByte(0, twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    trResult.add( trDest, trSrc );
-                    logger.info("TMPR($" + trResult + ") = TMPS($" + trSrc + ") + TMPD($" + trDest + ")");
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    TMPR.add( TMPD, TMPS );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPS(" + TMPS.hex() + ") + TMPD(" + TMPD.hex() + ")");
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // subtraction
                 case iSUB:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.subtract( trDest, trSrc );
-                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") - TMPS($" + trSrc + ")");
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.subtract( TMPD, TMPS );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") - TMPS(" + TMPS.hex() + ")");
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // sub quick
                 case iSUBQ:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trSrc.set( 0 );
-                    trSrc.set( setByte(trSrc.get(), twobits.byte0, opcData) );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPS.set( 0 );
+                    TMPS.set( setByte( TMPS.get(), twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    trResult.subtract( trDest, trSrc );
-                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") - TMPS($" + trSrc + ")");
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    TMPR.subtract( TMPD, TMPS );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") - TMPS(" + TMPS.hex() + ")");
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // signed multiplication
                 case iMULS:
                     if( checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) ) {
-                        trSrc.fill( OpAddr1, DS, M1, R1 );
-                        trDest.fill( OpAddr2, DS, M2, R2 );
-                        if( getBits( (short) trSrc.get(), 15, 15) == 1 )
-                            trSrc.set( trSrc.get() | 0xFFFF0000 );
-                        if( getBits( (short) trDest.get(), 15, 15) == 1 )
-                            trDest.set( trDest.get() | 0xFFFF0000 );
-                        trResult.multiply( trDest, trSrc );
-                        logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") * TMPS($" + trSrc + ")");
-                        setZN( trResult );
+                        TMPS.fill( OpAddr1, DS, M1, R1 );
+                        TMPD.fill( OpAddr2, DS, M2, R2 );
+                        if( getBits( (short) TMPS.get(), 15, 15) == 1 )
+                            TMPS.set( TMPS.get() | 0xFFFF0000 );
+                        if( getBits( (short) TMPD.get(), 15, 15) == 1 )
+                            TMPD.set( TMPD.get() | 0xFFFF0000 );
+                        TMPR.multiply( TMPD, TMPS );
+                        logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") * TMPS(" + TMPS.hex() + ")");
+                        setZN( TMPR );
                         V = false;
                         C = false;
-                        trResult.write( OpAddr2, DataSize.longSize, M2, R2 );
+                        TMPR.write( OpAddr2, DataSize.longSize, M2, R2 );
                     }
                     break;
                 // signed division
                 case iDIVS:
                     if( checkCond( (DS == DataSize.longSize), "Invalid Data Size" ) ) {
-                        trSrc.fill( OpAddr1, DataSize.wordSize, M1, R1);
-                        logger.info("TMPS = $" + trSrc );
-                        if( checkCond( ( trSrc.get() != 0), "Division by Zero" ) ) {
-                            trDest.fill( OpAddr2, DS, M2, R2 );
-                            logger.info("TMPD = $" + trDest );
-                            V = ( ( trDest.get() / trSrc.get() ) < -32768 ) | ( ( trDest.get() / trSrc.get() ) > 32767 );
-                            if( trSrc.get() > 0x8000 ) {
+                        TMPS.fill( OpAddr1, DataSize.wordSize, M1, R1);
+                        logger.info("TMPS = " + TMPS.hex() );
+                        if( checkCond( ( TMPS.get() != 0), "Division by Zero" ) ) {
+                            TMPD.fill( OpAddr2, DS, M2, R2 );
+                            logger.info("TMPD = " + TMPD.hex() );
+                            V = ( ( TMPD.get() / TMPS.get() ) < -32768 ) | ( ( TMPD.get() / TMPS.get() ) > 32767 );
+                            if( TMPS.get() > 0x8000 ) {
                                 i = 1;
-                                trSrc.set( (trSrc.get() ^ 0xFFFF) + 1 );
-                                trDest.set( ~(trDest.get()) + 1 );
+                                TMPS.set( ( TMPS.get() ^ 0xFFFF) + 1 );
+                                TMPD.set( ~( TMPD.get()) + 1 );
                             }
                             
-                            logger.info("TMPS = $" + trSrc + "; TMPD = $" + trDest );
-                            if( (( trDest.get() / trSrc.get() ) == 0) && (i == 1) ) {
-                                trResult.set( setWord(trResult.get(), LEAST, (short)0) );
-                                logger.info("TMPR = $" + trResult );
-                                trDest.set( ~(trDest.get()) + 1 );
-                                logger.info("TMPD = $" + trDest );
-                                trResult.set( setWord(trResult.get(), MOST, (short)(trDest.get() % trSrc.get())) );
+                            logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex() );
+                            if( (( TMPD.get() / TMPS.get() ) == 0) && (i == 1) ) {
+                                TMPR.set( setWord( TMPR.get(), LEAST, (short)0) );
+                                logger.info("TMPR = " + TMPR.hex() );
+                                TMPD.set( ~( TMPD.get()) + 1 );
+                                logger.info("TMPD = " + TMPD.hex() );
+                                TMPR.set( setWord( TMPR.get(), MOST, (short)( TMPD.get() % TMPS.get())) );
                             }
                             else {
-                                trResult.set( trDest.get() / getWord(trSrc.get(), LEAST) );
-                                logger.info("TMPR = $" + trResult );
-                                trResult.set( setWord(trResult.get(), MOST, (short)(trDest.get() % getWord(trSrc.get(), LEAST))) );
+                                TMPR.set( TMPD.get() / getWord( TMPS.get(), LEAST) );
+                                logger.info("TMPR = " + TMPR.hex() );
+                                TMPR.set( setWord( TMPR.get(), MOST, (short)( TMPD.get() % getWord( TMPS.get(), LEAST))) );
                             }
 
-                            logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") / TMPS($" + trSrc + ")");
-                            setZN( trResult );
+                            logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") / TMPS(" + TMPS.hex() + ")");
+                            setZN( TMPR );
                             C = false ;
-                            trResult.write( OpAddr2, DS, M2, R2 );
+                            TMPR.write( OpAddr2, DS, M2, R2 );
                         }
                     }
                     break;
                 // negate
                 case iNEG:
-                    trDest.fill( OpAddr1, DS, M1, R1 );
-                    trResult.set( trDest.get() * -1 );
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    TMPD.fill( OpAddr1, DS, M1, R1 );
+                    TMPR.set( TMPD.get() * -1 );
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = Dm & Rm ;
                     C = Dm | Rm ;
-                    trResult.write( OpAddr1, DS, M1, R1 );
+                    TMPR.write( OpAddr1, DS, M1, R1 );
                     break;
                 // clear
                 case iCLR:
-                    trDest.set( 0 );
-                    setZN( trDest );
+                    TMPD.set( 0 );
+                    setZN( TMPD );
                     V = false;
                     C = false;
-                    trDest.write( OpAddr1, DS, M1, R1 );
+                    TMPD.write( OpAddr1, DS, M1, R1 );
                     break;
                 // bitwise
                 case iNOT:
-                    trDest.fill( OpAddr1, DS, M1, R1 );
-                    trResult.set( ~(trDest.get()) );
-                    setZN( trResult );
+                    TMPD.fill( OpAddr1, DS, M1, R1 );
+                    TMPR.set( ~( TMPD.get()) );
+                    setZN( TMPR );
                     V = false;
                     C = false;
-                    trResult.write( OpAddr1, DS, M1, R1 );
+                    TMPR.write( OpAddr1, DS, M1, R1 );
                     break;
                 // bitwise
                 case iAND:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.set( trDest.get() & trSrc.get() );
-                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") & TMPS($" + trSrc + ")");
-                    setZN( trResult );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.set( TMPD.get() & TMPS.get() );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") & TMPS(" + TMPS.hex() + ")");
+                    setZN( TMPR );
                     V = false;
                     C = false;
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // bitwise
                 case iOR:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.set( trDest.get() | trSrc.get() );
-                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") | TMPS($" + trSrc + ")");
-                    setZN( trResult );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.set( TMPD.get() | TMPS.get() );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") | TMPS(" + TMPS.hex() + ")");
+                    setZN( TMPR );
                     V = false;
                     C = false;
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // xor
                 case iEOR:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.set( trDest.get() ^ trSrc.get() );
-                    logger.info("TMPR($" + trResult + ") = TMPD($" + trDest + ") ^ TMPS($" + trSrc + ")");
-                    setZN( trResult );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.set( TMPD.get() ^ TMPS.get() );
+                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") ^ TMPS(" + TMPS.hex() + ")");
+                    setZN( TMPR );
                     V = false;
                     C = false;
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // shift left
                 case iLSL:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.set( trDest.get() + opcData );
-                    setZN( trResult );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.set( TMPD.get() + opcData );
+                    setZN( TMPR );
                     V = false;
                     if( opcData > 0 )
-                        C = getBits( (short)trDest.get(), DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
+                        C = getBits( (short) TMPD.get(), DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
                     else
                         C = false;
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // shift right
                 case iLSR:
@@ -794,57 +818,57 @@ class Sim68k {
                      TMPR = TMPS & !( 0x80000000 >> (opcData-1) ) as the constant 0x80000000 is NOT extended!
                      Instead, need to put 0x80000000 in a register and proceed as below:
                      */
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    logger.info("TMPD = $" + trDest + "; opcData = " + opcData);
-                    trSrc.set( 0x80000000 );
-                    trResult.set( trSrc.get() >> (opcData-1) );
-                    logger.info("TMPS = $" + trSrc + "; TMPR = TMPS >> " + (opcData-1) + " = $" + trResult );
-                    trSrc.set( ~(trResult.get()) );
-                    logger.info("TMPS = !TMPR = $" + trSrc );
-                    trResult.set( (trDest.get() >> opcData) & trSrc.get() );
-                    setZN( trResult );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    logger.info("TMPD = " + TMPD.hex() + "; opcData = " + opcData);
+                    TMPS.set( 0x80000000 );
+                    TMPR.set( TMPS.get() >> (opcData-1) );
+                    logger.info("TMPS = " + TMPS.hex() + "; TMPR = TMPS >> " + (opcData-1) + " = " + TMPR.hex() );
+                    TMPS.set( ~( TMPR.get()) );
+                    logger.info("TMPS = !TMPR = " + TMPS.hex() );
+                    TMPR.set( ( TMPD.get() >> opcData) & TMPS.get() );
+                    setZN( TMPR );
                     V = false;
-                    C = (opcData > 0) && ( getBits( (short)trDest.get(), opcData - 1, opcData - 1 ) == 1 );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    C = (opcData > 0) && ( getBits( (short) TMPD.get(), opcData - 1, opcData - 1 ) == 1 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate left
                 case iROL:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
                     opcData = (byte) (opcData % (8 * DS.sizeValue() ));
-                    trResult.set( trDest.get() + opcData );
-                    trSrc.set( trDest.get() >> ((8*DS.sizeValue()) - opcData) );
-                    trResult.set( setBits( trResult.get(), (byte)0, (byte)(opcData-1), (short)trSrc.get()) );
-                    setZN( trResult );
+                    TMPR.set( TMPD.get() + opcData );
+                    TMPS.set( TMPD.get() >> ((8*DS.sizeValue()) - opcData) );
+                    TMPR.set( setBits( TMPR.get(), (byte)0, (byte)(opcData-1), (short) TMPS.get()) );
+                    setZN( TMPR );
                     V = false;
                     C = (opcData > 0)
-                        && ( getBits( (short)trDest.get(), (DS.sizeValue() * 8)-opcData, (DS.sizeValue()*8)-opcData ) == 1 );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                        && ( getBits( (short) TMPD.get(), (DS.sizeValue() * 8)-opcData, (DS.sizeValue()*8)-opcData ) == 1 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate right
                 case iROR:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
                     opcData = (byte) (opcData % ( 8*DS.sizeValue() ));
-                    trResult.set( trDest.get() >> opcData );
-                    trResult.set( setBits( trResult.get(), (byte)(8*DS.sizeValue()-opcData), (byte)(8*DS.sizeValue()-1), (short)trDest.get()) );
-                    setZN( trResult );
+                    TMPR.set( TMPD.get() >> opcData );
+                    TMPR.set( setBits( TMPR.get(), (byte)(8*DS.sizeValue()-opcData), (byte)(8*DS.sizeValue()-1), (short) TMPD.get()) );
+                    setZN( TMPR );
                     V = false;
-                    C = (opcData > 0) && ( getBits( (short)trDest.get(), opcData - 1, opcData - 1 ) == 1 );
-                    trResult.write( OpAddr2, DS, M2, R2 );
+                    C = (opcData > 0) && ( getBits( (short) TMPD.get(), opcData - 1, opcData - 1 ) == 1 );
+                    TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // compare
                 case iCMP:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trResult.subtract( trDest, trSrc );
-                    setZN( trResult );
-                    setSmDmRm( trSrc, trDest, trResult );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPR.subtract( TMPD, TMPS );
+                    setZN( TMPR );
+                    setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
                     C = ( Sm & !Dm ) | ( Rm & !Dm ) | ( Sm & Rm );
                     break;
                 // test
                 case iTST:
-                    trDest.fill( OpAddr1, DS, M1, R1 );
-                    setZN( trDest );
+                    TMPD.fill( OpAddr1, DS, M1, R1 );
+                    setZN( TMPD );
                     V = false ;
                     C = false ;
                     break;
@@ -886,28 +910,28 @@ class Sim68k {
                     break;
                 // move
                 case iMOV:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
-                    trSrc.write( OpAddr2, DS, M2, R2 );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
+                    TMPS.write( OpAddr2, DS, M2, R2 );
                     break;
                 // move quick
                 case iMOVQ:
-                    trDest.fill( OpAddr2, DS, M2, R2 );
-                    trDest.set( setByte(trDest.get(), twobits.byte0, opcData) );
+                    TMPD.fill( OpAddr2, DS, M2, R2 );
+                    TMPD.set( setByte( TMPD.get(), twobits.byte0, opcData) );
                     // Sign extension if W or L ??
-                    setZN( trDest );
+                    setZN( TMPD );
                     V = false;
                     C = false;
-                    trDest.write( OpAddr2, DS, M2, R2 );
+                    TMPD.write( OpAddr2, DS, M2, R2 );
                     break;
                 // exchange
                 case iEXG:
                     if( checkCond( ((M1 == AddressMode.ADDRESS_REGISTER_DIRECT || M1 == AddressMode.DATA_REGISTER_DIRECT)
                                     && (M2 == AddressMode.ADDRESS_REGISTER_DIRECT || M2 == AddressMode.DATA_REGISTER_DIRECT)),
                             "Invalid Addressing Mode" ) ) {
-                        trSrc.fill( OpAddr1, DS, M1, R1 );
-                        trDest.fill( OpAddr2, DS, M2, R2 );
-                        trSrc.write( OpAddr1, DS, M2, R2 );
-                        trDest.write( OpAddr2, DS, M1, R1 );
+                        TMPS.fill( OpAddr1, DS, M1, R1 );
+                        TMPD.fill( OpAddr2, DS, M2, R2 );
+                        TMPS.write( OpAddr1, DS, M2, R2 );
+                        TMPD.write( OpAddr2, DS, M1, R1 );
                         V = false;
                         C = false;
                     }
@@ -929,7 +953,7 @@ class Sim68k {
                         case longSize -> System.out.print( "(" + DataSize.longSize.sizeValue() + ") for " );
                         default -> {
                             logger.logError( "ERROR >> INVALID data size '" + DS + "' for instruction '" + OpId
-                                            + "' at PC = " + ( PC - 2 ) );
+                                            + "' at PC = " + (PC-2) );
                             H = true;
                             return;
                         }
@@ -942,7 +966,7 @@ class Sim68k {
                         case RELATIVE_ABSOLUTE -> System.out.print( "the memory address " + OpAddr1 );
                         default -> {
                             logger.info( "ERROR >> INVALID mode type '" + M1 + "' for instruction '" + OpId
-                                         + "' at PC = " + ( PC - 2 ) );
+                                         + "' at PC = " + (PC-2) );
                             H = true;
                             return;
                         }
@@ -953,7 +977,7 @@ class Sim68k {
                         Scanner inpScanner = new Scanner( System.in );
                         inpStr = inpScanner.next();
                         logger.info("input == $" + inpStr);
-                        logger.info("Integer.getInteger(inpStr) == $" + Integer.getInteger("0x" + inpStr) );
+                        logger.info("Integer.parseInt(inpStr, 16) == $" + Integer.parseInt(inpStr, 16));
                     }
                     catch (Exception e) {
                         e.printStackTrace();
@@ -964,16 +988,16 @@ class Sim68k {
                      * Use strtoull() to ensure the maximum size to store our input without problems interpreting sign.
                      * Seems to work, so far, for both Linux x86_64 and Windows x64...
                      */
-                    trDest.set( Integer.parseInt(inpStr, 16) );
-                    logger.info("TMPD == $" + trDest.get() );
-                    setZN( trDest );
+                    TMPD.set( Integer.parseInt(inpStr, 16) );
+                    logger.info("TMPD = " + TMPD.hex() );
+                    setZN( TMPD );
                     C = false;
                     V = false;
-                    trDest.write( OpAddr1, DS, M1, R1 );
+                    TMPD.write( OpAddr1, DS, M1, R1 );
                     break;
                 // display
                 case iDSP:
-                    trSrc.fill( OpAddr1, DS, M1, R1 );
+                    TMPS.fill( OpAddr1, DS, M1, R1 );
                     switch (M1) {
                         case DATA_REGISTER_DIRECT -> System.out.print( "[ D" + (int) R1 + " ]  = " );
                         case ADDRESS_REGISTER_DIRECT -> System.out.print( "[ A" + (int) R1 + " ]  = " );
@@ -990,11 +1014,11 @@ class Sim68k {
                         }
                     }
                     switch (DS) {
-                        case byteSize -> System.out.println( "$" + Integer.toHexString(trSrc.get() & 0xff).toUpperCase()
+                        case byteSize -> System.out.println( "$" + Integer.toHexString( TMPS.get() & 0xff).toUpperCase()
                                             + " (" + DataSize.byteSize.strValue() + ")" );
-                        case wordSize -> System.out.println( "$" + Integer.toHexString(trSrc.get() & 0xffff).toUpperCase()
+                        case wordSize -> System.out.println( "$" + Integer.toHexString( TMPS.get() & 0xffff).toUpperCase()
                                             + " (" + DataSize.wordSize.strValue() + ")" );
-                        case longSize -> System.out.println( "$" + Integer.toHexString(trSrc.get()).toUpperCase(Locale.ROOT)
+                        case longSize -> System.out.println( "$" + Integer.toHexString( TMPS.get()).toUpperCase(Locale.ROOT)
                                             + " (" + DataSize.longSize.strValue() + ")" );
                         default -> {
                             logger.logError( "\n*** ERROR >> INVALID data size '" + DS
@@ -1019,13 +1043,13 @@ class Sim68k {
             }
         }
 
-        // Determines the format of the instruction: return True if F1, False if F2
+        /** Determines the format of the instruction: return True if F1, False if F2 */
         boolean formatF1( byte opid ) {
             return ( opid != iADDQ ) && ( opid != iSUBQ ) && ( ( opid < iLSL ) || ( opid > iROR ) ) && ( opid != iMOVQ );
         }
     }
 
-
+    /** simulates a CPU */
     class Processor {
         Processor() {
             DR = new int[2] ;
@@ -1036,7 +1060,7 @@ class Sim68k {
 
         private final Controller ctrl;
 
-        // Read into memory a machine language program contained in a file
+        /** Read into memory a machine language program contained in a file */
         boolean loadProgram( String fname ) {
             boolean inComment = false ;
             short address = 0 ;
@@ -1087,12 +1111,11 @@ class Sim68k {
                 return false;
             }
 
-//            writeln ('Program loaded. ', address,' bytes in memory.');
             System.out.println("Program loaded. " + address + " bytes in memory.");
             return true ;
         }
 
-        // Initialize Mnemo with Strings corresponding to each instruction
+        /** Initialize Mnemo with Strings corresponding to each instruction */
         void MnemoInit() {
             Mnemo = new String[iHLT + 1 ];
             Mnemo[iADD]   = "ADD";
@@ -1129,7 +1152,7 @@ class Sim68k {
             Mnemo[iHLT]   = "HLT";
         }
 
-        // Fetch-Execute Cycle simulated
+        /** Fetch-Execute Cycle simulated */
         void start() {
             logger.info( "" );
             do // Repeat the Fetch-Execute Cycle until the Halt bit becomes true
@@ -1157,6 +1180,7 @@ class Sim68k {
         System.exit( 0 );
     }
 
+    /** interact with the user and start the program */
     void startup(String logLevel) {
         // init logging
         logControl = new LogControl(logLevel);
