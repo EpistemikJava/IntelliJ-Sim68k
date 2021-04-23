@@ -8,6 +8,7 @@
 / ;   Assembly Language       OpCode   Oper1   Oper2  /
 / ;                           MSB LSB MSB LSB MSB LSB /
 / ;-------------------------------------------------- /
+/ mem 0 - 19 /
 / ; Branch to the first instruction /
 / BRA.W @Main             ; / $92 $60 $00 $14
 /  /
@@ -17,30 +18,34 @@
 / DEF.L @Var3, #$FFFF90AB ; / $FF $FF $90 $AB
 / DEF.L @Var4, #$FFFFCDEF ; / $FF $FF $CD $EF
 / DEF.L @Var5, #$000000F6 ; / $00 $00 $00 $F6
-/  /
 / ; Main program /
 / LABEL @Main             ; /
 /  /
 / ; Tests ADD and ADDQ /
 / ;----------------------- /
+/ mem 20 - 31 /
 /     ADD.B @Var1, @Var2  ; / $01 $66 $00 $04 $00 $06
 / ; *** Overflow, V = True /
 /     DSR.B               ; / $F0 $00
 /     DSP.W @Var2         ; / $EA $60 $00 $06
+/ mem 32 - 43 /
 /     ADD.W @Var1, @Var2  ; / $03 $66 $00 $04 $00 $06
 / ; *** No Overflow, V = False /
 /     DSR.B               ; / $F0 $00
 /     DSP.W @Var2         ; / $EA $60 $00 $06
+/ mem 44 - 53 /
 /     MOVE.L @Var5, D0    ; / $C5 $60 $00 $10
 /     ADDQ.B #$A, D0      ; / $08 $A0
 / ; *** Carry, C = True /
 /     DSR.B               ; / $F0 $00
 /     DSP.L D0            ; / $EC $00
+/ mem 54 - 63 /
 /     MOVE.L @Var5, D0    ; / $C5 $60 $00 $10
 /     ADDQ.W #$A, D0      ; / $0A $A0
 / ; *** No Carry, C = False /
 /     DSR.B               ; / $F0 $00
 /     DSP.L D0            ; / $EC $00
+/ mem /
 /     ADD.L @Var3, @Var4  ; / $05 $66 $00 $08 $00 $0C
 / ; *** Carry /
 /     DSR.B               ; / $F0 $00
