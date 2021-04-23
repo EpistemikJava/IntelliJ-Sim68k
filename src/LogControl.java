@@ -258,7 +258,7 @@ public class LogControl {
             LOGFILE_MAX_BYTES = 1024 * 1024;
 
     /** {@link Level} to print initialization messages = Level.SEVERE */
-    static final Level INIT_LEVEL = Level.CONFIG;
+    static final Level INIT_LEVEL = Level.INFO;
 
     /** {@link Level} to print initialization messages = Level.SEVERE */
     static final Level ERROR_LEVEL = Level.WARNING;
