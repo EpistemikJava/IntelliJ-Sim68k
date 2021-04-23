@@ -354,7 +354,7 @@ class MhsLogger extends Logger {
         if( (callclass == null) || (callmethod == null) ) {
             getCallerClassAndMethodName();
         }
-        LogRecord $logRec = getRecord( LogControl.ERROR_LEVEL, "LINE #" + lineNum + MhsFormatter.NLN + msg );
+        LogRecord $logRec = getRecord( LogControl.ERROR_LEVEL, "LINE #" + lineNum + MhsFormatter.NLN + "ERROR: " + msg );
         sendRecord($logRec);
     }
 
