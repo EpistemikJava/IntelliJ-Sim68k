@@ -370,7 +370,7 @@ class Sim68k {
                             H = true;
                         }
                     }
-                    logger.warning( "DR[" + RegNo + "] now = " + Sim68k.intHex( DR[RegNo] ) );
+                    logger.fine( "DR[" + RegNo + "] now = " + Sim68k.intHex( DR[RegNo] ) );
                 }
 
                 case ADDRESS_REGISTER_DIRECT -> AR[RegNo] = getWord( get(), LEAST );
@@ -404,8 +404,9 @@ class Sim68k {
                     H = true;
                 }
             }
+            // debug
             int MXR = 48;
-            logger.warning( "Memory[" + MXR + "] = " + mem.show(MXR) + " | Memory[" + (MXR+1) + "] = " + mem.show(MXR+1) );
+            logger.finer( "Memory[" + MXR + "] = " + mem.show(MXR) + " | Memory[" + (MXR+1) + "] = " + mem.show(MXR+1) );
         }
     }
 
@@ -442,20 +443,10 @@ class Sim68k {
                         case wordSize -> {
                             byte mem0 = memory[MAR] ;
                             byte mem1 = memory[MAR+1] ;
-                            logger.warning( "Memory[" + MAR + "] = " + mem0 + " | " + byteInHex(mem0) );
-                            logger.warning( "Memory[" + (MAR+1) + "] = " + mem1 + " | " + byteInHex(mem1) );
-                            int mart1 = mem0 * 0x100;
-                            logger.warning( "mart1 = " + mart1 + " | " + intHex(mart1) );
-                            int mart1a = (mem0 * 0x100) & 0x0000FF00 ;
-                            logger.warning( "mart1a = " + mart1a + " | " + intHex(mart1a) );
-                            int mart2 = mem0 << 8;
-                            logger.warning( "mart2 = " + mart2 + " | " + intHex(mart2) );
-                            int mart3 = mem0 * 256;
-                            logger.warning( "mart3 = " + mart3 + " | " + intHex(mart3) );
+                            logger.fine( "Memory[" + MAR + "] = " + mem0 + " | " + byteInHex(mem0) );
+                            logger.fine( "Memory[" + (MAR+1) + "] = " + mem1 + " | " + byteInHex(mem1) );
                             int mdrt1 = ( (mem0 * 0x100) & 0x0000FF00 ) | ( mem1 & 0x000000FF );
-                            logger.warning( "mdrt1 = " + mdrt1 + " | " + intHex(mdrt1) );
-                            int mdrtest = mart3 + mem1 ;
-                            logger.warning( "mdrtest = " + mdrtest + " | " + intHex(mdrtest) );
+                            logger.fine( "mdrt1 = " + mdrt1 + " | " + intHex(mdrt1) );
                             MDR = mdrt1 ;
                         }
                         case longSize -> MDR = ( (memory[MAR] * 0x1000000) & 0xFF000000 ) |
@@ -470,32 +461,19 @@ class Sim68k {
                     logger.info("READ of " + dsz.strValue() + ": now MDR = " + MDR + " | "  + intHex(MDR));
                 }
                 else { // false = WRITE = copy an element from the CPU's MDR to memory
-                    logger.warning( "WRITE of " + dsz.strValue() + ": MAR = " + MAR + " | MDR = " + intHex(MDR) );
+                    logger.info( "WRITE of " + dsz.strValue() + ": MAR = " + MAR + " | MDR = " + intHex(MDR) );
                     switch (dsz) {
                         case byteSize -> {
                             memory[MAR] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.warning( dsz.strValue() + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR]) );
+                            logger.fine( dsz.strValue() + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR]) );
                         }
                         case wordSize -> {
-                            logger.warning( "MDR = " + MDR + " | " + intHex(MDR) );
-                            short mdrtest = Integer.valueOf( MDR ).shortValue();
-                            logger.warning( "mdrtest = " + mdrtest + " | " + intHex(mdrtest) );
-                            short mdrcast = (short)MDR;
-                            logger.warning( "mdrcast = " + mdrcast + " | " + intHex(mdrcast) );
-                            short mdra = (short) (mdrcast / 256);
-                            logger.warning( "mdra = " + mdra + " | " + intHex(mdra) );
-                            short mdrb = (short)((MDR >> 8) & 0x000000FF);
-                            logger.warning( "mdrb = " + mdrb + " | " + intHex(mdrb) );
-                            short mdr1 = (short) (mdrcast / 0x100);
-                            logger.warning( "mdr1 = " + mdr1 + " | " + intHex(mdr1) );
-                            short mdr2 = (short) (mdr1 % 0x100);
-                            logger.warning( "mdr2 = " + mdr2 + " | " + intHex(mdr2) );
-                            byte mdr3 = (byte) mdrb;
-                            logger.warning( "mdr3 = " + mdr3 + " | " + byteInHex(mdr3) );
+                            byte mdrb = (byte)( (MDR >> 8) & 0x000000FF );
+                            logger.finer( "mdrb = " + mdrb + " | " + intHex(mdrb) );
 //                            memory[MAR]   = (byte)( (mdrcast / 0x100) % 0x100 ); // MSB: 8 first bits
-                            memory[MAR]   = mdr3; // MSB: 8 first bits
-                            memory[(MAR+1)] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.warning( dsz.strValue()
+                            memory[MAR]   = mdrb; // MSB: 8 first bits
+                            memory[MAR+1] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
+                            logger.fine( dsz.strValue()
                                             + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
                                             + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1]) );
                         }
@@ -504,7 +482,7 @@ class Sim68k {
                             memory[MAR+1] = (byte)( (MDR >> 16) & 0x000000FF );
                             memory[MAR+2] = (byte)( (MDR >> 8) & 0x000000FF );
                             memory[MAR+3] = (byte)( MDR % 0x100 );
-                            logger.warning( dsz.strValue()
+                            logger.fine( dsz.strValue()
                                             + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
                                             + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1])
                                             + "\n\t\t\tmemory[" + (MAR+2) + "] now = " + byteInHex(memory[MAR+2])
@@ -1023,7 +1001,7 @@ class Sim68k {
                             return;
                         }
                     }
-                    System.out.println(": ");
+                    System.out.print(": ");
                     String inpStr;
                     long inpl = 0;
                     try {
@@ -1252,13 +1230,13 @@ class Sim68k {
             System.out.println("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
             // read the next word
             input = inScanner.next().toLowerCase();
-            System.out.println("input = " + input);
+            logger.finer("input = " + input);
             switch (input) {
                 case EXECUTE -> {
                     // execution on the simulator
                     System.out.println( "Name of the 68k binary program ('.68b' will be added automatically): " );
                     input = inScanner.next();
-                    System.out.println( "input = " + input );
+                    logger.finer( "input = " + input );
                     if( proc.loadProgram( input + ".68b" ) )
                         proc.start();
                     else
