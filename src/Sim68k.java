@@ -465,7 +465,7 @@ class Sim68k {
                     switch (dsz) {
                         case byteSize -> {
                             memory[MAR] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.fine( dsz.strValue() + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR]) );
+                            logger.fine( dsz.strValue() + ".WRITE: now memory[" + MAR + "] = " + byteInHex(memory[MAR]) );
                         }
                         case wordSize -> {
                             byte mdrb = (byte)( (MDR >> 8) & 0x000000FF );
@@ -705,7 +705,7 @@ class Sim68k {
                 case iSUBQ:
                     TMPD.fill( OpAddr2, DS, M2, R2 );
                     TMPS.set( 0 );
-                    TMPS.set( setByte( TMPS.get(), TwoBits.byte0, opcData) );
+                    TMPS.set( setByte(TMPS.get(), TwoBits.byte0, opcData) );
                     // Sign extension if W or L ??
                     TMPR.subtract( TMPD, TMPS );
                     logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") - TMPS(" + TMPS.hex() + ")");
@@ -720,9 +720,9 @@ class Sim68k {
                     if( checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) ) {
                         TMPS.fill( OpAddr1, DS, M1, R1 );
                         TMPD.fill( OpAddr2, DS, M2, R2 );
-                        if( getBits( (short) TMPS.get(), 15, 15) == 1 )
+                        if( getBits( (short)TMPS.get(), 15, 15) == 1 )
                             TMPS.set( TMPS.get() | 0xFFFF0000 );
-                        if( getBits( (short) TMPD.get(), 15, 15) == 1 )
+                        if( getBits( (short)TMPD.get(), 15, 15) == 1 )
                             TMPD.set( TMPD.get() | 0xFFFF0000 );
                         TMPR.multiply( TMPD, TMPS );
                         logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") * TMPS(" + TMPS.hex() + ")");
@@ -737,30 +737,28 @@ class Sim68k {
                     if( checkCond( (DS == DataSize.longSize), "Invalid Data Size" ) ) {
                         TMPS.fill( OpAddr1, DataSize.wordSize, M1, R1);
                         logger.info("TMPS = " + TMPS.hex() );
-                        if( checkCond( ( TMPS.get() != 0), "Division by Zero" ) ) {
+                        if( checkCond( (TMPS.get() != 0), "Division by Zero" ) ) {
                             TMPD.fill( OpAddr2, DS, M2, R2 );
-                            logger.info("TMPD = " + TMPD.hex() );
-                            V = ( ( TMPD.get() / TMPS.get() ) < -32768 ) | ( ( TMPD.get() / TMPS.get() ) > 32767 );
+                            logger.info("TMPD = " + TMPD.hex());
+                            V = ( (TMPD.get() / TMPS.get()) < -32768 ) | ( (TMPD.get() / TMPS.get()) > 32767 );
                             if( TMPS.get() > 0x8000 ) {
                                 i = 1;
-                                TMPS.set( ( TMPS.get() ^ 0xFFFF) + 1 );
+                                TMPS.set( (TMPS.get() ^ 0xFFFF) + 1 );
                                 TMPD.set( ~( TMPD.get()) + 1 );
                             }
-                            
-                            logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex() );
+                            logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex());
                             if( (( TMPD.get() / TMPS.get() ) == 0) && (i == 1) ) {
-                                TMPR.set( setWord( TMPR.get(), LEAST, (short)0) );
+                                TMPR.set( setWord(TMPR.get(), LEAST, (short)0) );
                                 logger.info("TMPR = " + TMPR.hex() );
                                 TMPD.set( ~( TMPD.get()) + 1 );
                                 logger.info("TMPD = " + TMPD.hex() );
-                                TMPR.set( setWord( TMPR.get(), MOST, (short)( TMPD.get() % TMPS.get())) );
+                                TMPR.set( setWord(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get())) );
                             }
                             else {
-                                TMPR.set( TMPD.get() / getWord( TMPS.get(), LEAST) );
+                                TMPR.set( TMPD.get() / getWord(TMPS.get(), LEAST) );
                                 logger.info("TMPR = " + TMPR.hex() );
-                                TMPR.set( setWord( TMPR.get(), MOST, (short)( TMPD.get() % getWord( TMPS.get(), LEAST))) );
+                                TMPR.set( setWord(TMPR.get(), MOST, (short)(TMPD.get() % getWord(TMPS.get(), LEAST))) );
                             }
-
                             logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") / TMPS(" + TMPS.hex() + ")");
                             setZN( TMPR );
                             C = false ;
@@ -1003,13 +1001,18 @@ class Sim68k {
                     }
                     System.out.print(": ");
                     String inpStr;
+                    int radix = 10;
                     long inpl = 0;
                     try {
                         Scanner inpScanner = new Scanner( System.in );
                         inpStr = inpScanner.next();
                         logger.info("input = " + inpStr);
-                        inpl = Long.parseLong( inpStr, 16 );
-                        logger.info("Long.parseLong(inpStr, 16) = " + inpl);
+                        if( inpStr.charAt(0) == HEX_MARKER ) {
+                            radix = 16 ;
+                            inpStr = inpStr.substring(1) ;
+                        }
+                        inpl = Long.parseLong( inpStr, radix );
+                        logger.info("Long.parseLong(" + inpStr + ", " + radix + ") = " + inpl);
                     }
                     catch (Exception e) {
                         e.printStackTrace();
@@ -1227,14 +1230,14 @@ class Sim68k {
 
         // Menu
         while( !input.equals(QUIT) ) {
-            System.out.println("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
+            System.out.print("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
             // read the next word
             input = inScanner.next().toLowerCase();
             logger.finer("input = " + input);
             switch (input) {
                 case EXECUTE -> {
                     // execution on the simulator
-                    System.out.println( "Name of the 68k binary program ('.68b' will be added automatically): " );
+                    System.out.print( "Name of the 68k binary program ('.68b' will be added automatically): " );
                     input = inScanner.next();
                     logger.finer( "input = " + input );
                     if( proc.loadProgram( input + ".68b" ) )
