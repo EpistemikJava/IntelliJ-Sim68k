@@ -45,14 +45,15 @@
 / ; *** No Carry, C = False /
 /     DSR.B               ; / $F0 $00
 /     DSP.L D0            ; / $EC $00
-/ mem /
+/ mem 64 - 75 /
 /     ADD.L @Var3, @Var4  ; / $05 $66 $00 $08 $00 $0C
 / ; *** Carry /
 /     DSR.B               ; / $F0 $00
 /     DSP.L @Var4         ; / $EC $60 $00 $0C
+/ mem 76 - 77 /
 / ; Waits for a value to be input /
 /     INP.L D1            ; / $E4 $10
-/  /
+/ mem /
 / ; Tests SUB and SUBQ /
 / ;----------------------- /
 /     SUB.L @Var3, @Var4  ; / $15 $66 $00 $08 $00 $0C
