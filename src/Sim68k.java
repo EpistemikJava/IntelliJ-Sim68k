@@ -34,37 +34,37 @@ class Sim68k {
 
     /** List of OpId = OpCode */
     final static int iADD  =  0 , // Regular binary integer addition
-                     iADDQ =  1 ; // Quick binary integer addition
-    final static int iSUB =   2 ; // Regular binary integer subtraction
-    final static int iSUBQ =  3 ; // Quick binary integer subtraction
-    final static int iMULS =  4 ; // Signed binary multiplication
-    final static int iDIVS =  5 ; // Signed binary division
-    final static int iNEG =   6 ; // Signed binary negation
-    final static int iCLR =   7 ; // Clear (set to 0)
-    final static int iNOT =   8 ; // Logical NOT
-    final static int iAND =   9 ; // Logical AND
-    final static int iOR  =  10 ; // Logical OR
-    final static int iEOR =  11 ; // Logical EXCLUSIVE-OR
-    final static int iLSL =  12 ; // Logical Shift Left
-    final static int iLSR =  13 ; // Logical Shift Right
-    final static int iROL =  14 ; // Rotate Left
-    final static int iROR =  15 ; // Rotate Right
-    final static int iCMP =  16 ; // Compare (to adjust CVNZH according to D-S)
-    final static int iTST =  17 ; // Test    (to adjust CVNZH according to D)
-    final static int iBRA =  18 ; // Unconditional branch to the given address
-    final static int iBVS =  19 ; // Branch to the given address if overflow
-    final static int iBEQ =  20 ; // Branch to the given address if equal
-    final static int iBCS =  21 ; // Branch to the given address if carry
-    final static int iBGE =  22 ; // Branch to the given address if greater | equal
-    final static int iBLE =  23 ; // Branch to the given address if less | equal
-    final static int iMOV =  24 ; // Regular move
-    final static int iMOVQ = 25 ; // Quick move
-    final static int iEXG =  26 ; // Exchange 2 registers
-    final static int iMOVA = 27 ; // Move the given address into A[i]
-    final static int iINP =  28 ; // Read from keyboard (input)
-    final static int iDSP =  29 ; // Display the name, the source & the contents
-    final static int iDSR =  30 ; // Display the contents of the Status booleans
-    final static int iHLT =  31 ; // HALT
+                     iADDQ =  1 , // Quick binary integer addition
+                     iSUB =   2 , // Regular binary integer subtraction
+                     iSUBQ =  3 , // Quick binary integer subtraction
+                     iMULS =  4 , // Signed binary multiplication
+                     iDIVS =  5 , // Signed binary division
+                     iNEG =   6 , // Signed binary negation
+                     iCLR =   7 , // Clear (set to 0)
+                     iNOT =   8 , // Logical NOT
+                     iAND =   9 , // Logical AND
+                     iOR  =  10 , // Logical OR
+                     iEOR =  11 , // Logical EXCLUSIVE-OR
+                     iLSL =  12 , // Logical Shift Left
+                     iLSR =  13 , // Logical Shift Right
+                     iROL =  14 , // Rotate Left
+                     iROR =  15 , // Rotate Right
+                     iCMP =  16 , // Compare (to adjust CVNZH according to D-S)
+                     iTST =  17 , // Test    (to adjust CVNZH according to D)
+                     iBRA =  18 , // Unconditional branch to the given address
+                     iBVS =  19 , // Branch to the given address if overflow
+                     iBEQ =  20 , // Branch to the given address if equal
+                     iBCS =  21 , // Branch to the given address if carry
+                     iBGE =  22 , // Branch to the given address if greater | equal
+                     iBLE =  23 , // Branch to the given address if less | equal
+                     iMOV =  24 , // Regular move
+                     iMOVQ = 25 , // Quick move
+                     iEXG =  26 , // Exchange 2 registers
+                     iMOVA = 27 , // Move the given address into A[i]
+                     iINP =  28 , // Read from keyboard (input)
+                     iDSP =  29 , // Display the name, the source & the contents
+                     iDSR =  30 , // Display the contents of the Status booleans
+                     iHLT =  31 ; // HALT program
 
     /** identify the Least OR Most Significant bit/byte/word of a number */
     static final boolean LEAST = false,
@@ -207,67 +207,94 @@ class Sim68k {
 
      *************************************************************************** */
 
-    /** Returns a subString of bits between FirstBit and LastBit from a word <br>
+    /**
+     *  Return a subString of bits between FirstBit and LastBit from a word <br>
         Ex: <br>
           Bit Positions: 15-12 11-8  7-4   3-0 <br>
           wV = 0x1234 =  0001  0010  0011  0100 <br>
           FirstBit = 3, LastBit = 9 <br>
           The bits from 3 to 9 are:  10 0011 0 <br>
-          So the function returns 0x0046 (0000 0000 0100 0110)  */
+          So the function returns 0x0046 (0000 0000 0100 0110)
+     */
     short getBits( final short wV, final int FirstBit, final int LastBit) {
         return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
     }
 
-    /** Gets one word from an int <br>
+    /** Get most or least significant word from an int <br>
         MSW: false = Least Significant Word, true = Most Significant Word */
-    short getWord( final int nV, boolean MSW) {
+    int getWord(final int nV, boolean MSW) {
         if( MSW )
-            return (short)( (nV & 0xFFFF0000) >> 16 );
-        return (short)( nV & 0x0000FFFF );
+            return (short)( nV >>> 16 );
+//            return (short)( (nV & 0xFFFF0000) >> 16 );
+
+        logger.info( "nV = " + nV + " | " + intHex(nV) );
+        int nvl = nV << 16 ;
+        logger.info( "nvl = " + nvl + " | " + intHex(nvl) );
+        int nvr = nvl >>> 16 ;
+        logger.info( "nvr = " + nvr + " | " + intHex(nvr) );
+        short snvr = Integer.valueOf( nvl >>> 16 ).shortValue();
+        logger.info( "snvr = " + snvr + " | " + intHex(snvr) );
+//        return (short)( nV & 0x0000FFFF );
+        return nvr ;
     }
 
-    /** In an int sets the bit indicated by posn to val (false or true) */
-    int setBit(int pnV, final short posn, final boolean val) {
+    /** In an int set the bit indicated by posn to val (false or true) */
+    int setBit(int nV, final short posn, final boolean val) {
         byte bt = (val) ? (byte)1 : (byte)0 ;
-        return (pnV & (0xFFFFFFFF - (1 << posn))) | (bt << posn) ;
+        return (nV & (0xFFFFFFFF - (1 << posn))) | (bt << posn) ;
     }
 
-    /** In an int sets the bits between first and last to the least significant bits of val */
-    int setBits(int pnV, final byte first, final byte last, final short val) {
+    /** In an int set the bits between first and last to the least significant bits of val */
+    int setBits(int nV, final byte first, final byte last, final short val) {
         short pos;
-        int result = pnV;
+        int result = nV;
         for( pos = first; pos <= last; pos++ )
             result = setBit( result, pos, (getBits(val, (byte)(pos - first), (byte)(pos - first)) == 1) );
         return result;
     }
 
-    /** In an int sets one byte indicated by posn to val */
-    int setByte(int pnV, final TwoBits posn, final byte val) {
+    /** In an int set one byte indicated by posn to val */
+    int setByte(int nV, final TwoBits posn, final byte val) {
         switch (posn) {
-            case byte0 -> { return (pnV & 0xFFFFFF00) | val; }
-            case byte1 -> { return (pnV & 0xFFFF00FF) | (val << 8); }
-            case byte2 -> { return (pnV & 0xFF00FFFF) | (val << 16); }
-            case byte3 -> { return (pnV & 0x00FFFFFF) | (val << 24); }
+            case byte0 -> { return (nV & 0xFFFFFF00) | val; }
+            case byte1 -> { return (nV & 0xFFFF00FF) | (val << 8); }
+            case byte2 -> { return (nV & 0xFF00FFFF) | (val << 16); }
+            case byte3 -> { return (nV & 0x00FFFFFF) | (val << 24); }
         }
         return 0; // should NEVER reach here
     }
 
-    /** In an int sets one word indicated by MSW to val <br>
+    /** In an int set one word indicated by MSW to val <br>
         MSW: false = Least Significant Word, true = Most Significant Word */
-    int setWord(int pnV, final boolean MSW, final short val) {
-        if( MSW )
-            return (pnV & 0x0000FFFF) | (val << 16) ;
-        return (pnV & 0xFFFF0000) | val ;
+    int setWord(int nV, final boolean MSW, final int val) {
+        if( MSW ) {
+            logger.info( "nV = " + nV + " | " + intHex(nV) );
+            logger.info( "val = " + val + " | " + intHex(val) );
+            int nvmod = nV & 0x0000FFFF ;
+//            int nvmod = nV >>> 16 ;
+            logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
+            short valmod = (short) (val << 16);
+            logger.info( "valmod = " + valmod + " | " + intHex(valmod) );
+//            return ( nV & 0x0000FFFF ) | ( val << 16 );
+            return( nvmod | valmod );
+        }
+        logger.info( "nV = " + nV + " | " + intHex(nV) );
+        logger.info( "val = " + val + " | " + intHex(val) );
+        int nvmod = nV & 0xFFFF0000 ;
+//        int nvmod = (nV << 16) >>> 16 ;
+        logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
+//        return (nV & 0xFFFF0000) | val ;
+        return( nvmod | val );
     }
 
-    /** utility function for easy display of hex values */
+    /** utility function for easy display of a byte value as an unsigned hex String */
     static String byteInHex(byte value) {
         return( HEX_MARKER + Integer.toHexString(Byte.toUnsignedInt(value)).toUpperCase(Locale.ROOT) );
     }
 
-    /** utility function for easy display of hex values */
+    /** utility function for easy display of an int value as UNSIGNED hex and bit String */
     static String intHex(int value) {
-        return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) );
+        return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) + " | " + Integer.toBinaryString(value) );
     }
 
     /*
@@ -283,10 +310,14 @@ class Sim68k {
 
         void set(int val) { value = val; }
         int get() { return value; }
+        /** display value as a hex String */
         String hex() { return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) ); }
 
+        /** set value to the sum of the values in the parameters */
         void add(TempReg trA, TempReg trB) { set( trA.get() + trB.get() ); }
+        /** set value to the difference of the values in the parameters */
         void subtract(TempReg trA, TempReg trB) { set( trA.get() - trB.get() ); }
+        /** set value to the product of the values in the parameters */
         void multiply(TempReg trA, TempReg trB) { set( trA.get() * trB.get() ); }
 
         /* ***************************************************************************
@@ -296,14 +327,14 @@ class Sim68k {
          Here are 2 suggestions of procedures to do this.
          **************************************************************************** */
 
-        /** Transfer the contents of a Register OR Memory to a temporary register */
-        void fill(
-//            int*   pReg,     // tmp Register to modify - TMPS, TMPD or TMPR
-            short       opAddr,   // address of Operand for addressMode RELATIVE_ABSOLUTE
-            DataSize    dsz,      // Data Size
-            AddressMode mode,     // required Addressing Mode
-            byte        regNo   ) // Register number for A[n] or D[n]
-        {
+        /**
+         *  Transfer the contents of a CPU Register OR Memory to this temporary register
+         *  @param opAddr  address of Operand for addressMode RELATIVE_ABSOLUTE
+         *  @param    dsz  Data Size
+         *  @param   mode  required Addressing Mode
+         *  @param  regNo  Register number for A[n] or D[n]
+         */
+        void fill( short opAddr, DataSize dsz, AddressMode mode, byte regNo ) {
             logger.info( "Operand address = " + opAddr + "; dsz = " + dsz.strValue()
                             + "; adrMode = " + mode + "; RegNo = " + regNo );
             switch (mode) {
@@ -349,21 +380,31 @@ class Sim68k {
             }
         }
 
-        /** Transfer the contents of temporary register to Register OR Memory */
-        void write(
-//            int    tmpReg,   // Source Register (TMPD...)
-            short       OpAddr,   // Operand Address
-            DataSize    dsz,      // Data Size
-            AddressMode mode,     // required Addressing Mode
-            byte        RegNo )   // Register Number for A[n] or D[n]
-        {
+        /**
+         *  Transfer the contents of this temporary register to a CPU Register OR Memory
+         *  @param OpAddr  address of Operand for addressMode RELATIVE_ABSOLUTE
+         *  @param    dsz  Data Size
+         *  @param   mode  required Addressing Mode
+         *  @param  RegNo  Register Number for A[n] or D[n]
+         */
+        void write( short OpAddr, DataSize dsz, AddressMode mode, byte RegNo ) {
             logger.info( "Operand address = " + OpAddr + "; dsz = " + dsz.strValue()
                             + "; adrMode = " + mode + "; RegNo = " + RegNo );
             switch (mode) {
                 case DATA_REGISTER_DIRECT -> {
                     switch (dsz) {
-                        case byteSize -> DR[RegNo] = setBits( DR[RegNo], (byte) 0, (byte) 7, (short) get() );
-                        case wordSize -> DR[RegNo] = setWord( DR[RegNo], LEAST, getWord( get(), LEAST ) );
+                        case byteSize -> DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)get() );
+                        case wordSize -> {
+                            int dr = DR[RegNo];
+                            logger.info( "DR[" + RegNo + "] = " + dr + " | " + intHex(dr) );
+                            logger.info( "temp value = " + get() + " | " + intHex(get()) );
+                            int lsw = getWord(get(), LEAST);
+                            logger.info( "LSW of temp value = " + lsw + " | " + intHex(lsw) );
+                            int newDR = setWord( dr, LEAST, lsw );
+                            logger.info( "new DR = " + newDR + " | " + intHex(newDR) );
+//                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
+                            DR[RegNo] = newDR;
+                        }
                         case longSize -> DR[RegNo] = get();
                         default -> {
                             logger.logError( "\n>>> INVALID data size '" + dsz + "' at PC = " + (PC-2) );
@@ -372,16 +413,14 @@ class Sim68k {
                     }
                     logger.fine( "DR[" + RegNo + "] now = " + Sim68k.intHex( DR[RegNo] ) );
                 }
+                case ADDRESS_REGISTER_DIRECT -> AR[RegNo] = (short) getWord( get(), LEAST );
 
-                case ADDRESS_REGISTER_DIRECT -> AR[RegNo] = getWord( get(), LEAST );
-
+                // We need to access memory, except for branching & MOVA
                 case RELATIVE_ABSOLUTE -> {
-                    // We need to access memory, except for branching & MOVA
                     MAR = OpAddr;
                     MDR = get();
                     mem.access( dsz, WRITE );
                 }
-
                 // We need to access memory
                 case ADDRESS_REGISTER_INDIRECT, ADDRESS_REGISTER_INDIRECT_PREDEC -> {
                     // ATTENTION: for some instructions, the address register has already been decremented by fillTmpReg
@@ -390,7 +429,6 @@ class Sim68k {
                     MDR = get();
                     mem.access( dsz, WRITE );
                 }
-
                 // We need to access memory.
                 case ADDRESS_REGISTER_INDIRECT_POSTINC -> {
                     // ATTENTION: for some instructions, the address register has already been incremented by fillTmpReg()
@@ -399,7 +437,7 @@ class Sim68k {
                     MDR = get();
                     mem.access( dsz, WRITE );
                 }
-                default -> { // invalid addressMode
+                default -> {
                     logger.logError( "\n>>> INVALID Addressing Mode '" + mode + "' at PC = " + (PC-2) );
                     H = true;
                 }
@@ -426,78 +464,80 @@ class Sim68k {
             memory[location] = data ;
         }
 
+        /** display a memory byte value as a hex String */
         String show(int place) { return byteInHex( memory[place] ); }
 
         /**
-         *  Copies an element (Byte, Word, Long) from memory\CPU to CPU\memory.
-         *  Verifies if we are trying to access an address outside the allowed range [0x0000..0x1000].
-         *  Uses an RW (read|write) boolean.
-         *  Parameter dsz determines the data size (byte, short, int/long).
+         *  Copies an element (Byte, Word, Long) from memory to MDR or MDR to memory
+         *  Verifies if we are trying to access an address outside the allowed range [0x0000..0x1000]
+         *  @param RW is a read|write boolean
+         *  @param dsz determines the data size (byte, word, long)
          */
         void access(DataSize dsz, boolean RW ) {
-            if( MAR < MemorySize ) { // valid Memory Address range
-                if( RW ) { // true = READ = copy an element from memory to the CPU's MDR
-                    switch (dsz) {
-                        case byteSize -> MDR = memory[MAR];
-//                        case wordSize -> MDR = memory[MAR] * 0x100 + memory[MAR + 1];
-                        case wordSize -> {
-                            byte mem0 = memory[MAR] ;
-                            byte mem1 = memory[MAR+1] ;
-                            logger.fine( "Memory[" + MAR + "] = " + mem0 + " | " + byteInHex(mem0) );
-                            logger.fine( "Memory[" + (MAR+1) + "] = " + mem1 + " | " + byteInHex(mem1) );
-                            int mdrt1 = ( (mem0 * 0x100) & 0x0000FF00 ) | ( mem1 & 0x000000FF );
-                            logger.fine( "mdrt1 = " + mdrt1 + " | " + intHex(mdrt1) );
-                            MDR = mdrt1 ;
-                        }
-                        case longSize -> MDR = ( (memory[MAR] * 0x1000000) & 0xFF000000 ) |
-                                               ( (memory[MAR+1] * 0x10000) & 0x00FF0000 ) |
-                                               ( (memory[MAR+2] * 0x100) & 0x0000FF00 ) |
-                                               (  memory[MAR+3] & 0x000000FF );
-                        default -> {
-                            logger.logError("\n*** INVALID data size: " + dsz.strValue());
-                            H = true;
-                        }
-                    }
-                    logger.info("READ of " + dsz.strValue() + ": now MDR = " + MDR + " | "  + intHex(MDR));
-                }
-                else { // false = WRITE = copy an element from the CPU's MDR to memory
-                    logger.info( "WRITE of " + dsz.strValue() + ": MAR = " + MAR + " | MDR = " + intHex(MDR) );
-                    switch (dsz) {
-                        case byteSize -> {
-                            memory[MAR] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.fine( dsz.strValue() + ".WRITE: now memory[" + MAR + "] = " + byteInHex(memory[MAR]) );
-                        }
-                        case wordSize -> {
-                            byte mdrb = (byte)( (MDR >> 8) & 0x000000FF );
-                            logger.finer( "mdrb = " + mdrb + " | " + intHex(mdrb) );
-//                            memory[MAR]   = (byte)( (mdrcast / 0x100) % 0x100 ); // MSB: 8 first bits
-                            memory[MAR]   = mdrb; // MSB: 8 first bits
-                            memory[MAR+1] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
-                            logger.fine( dsz.strValue()
-                                            + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
-                                            + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1]) );
-                        }
-                        case longSize -> {
-                            memory[MAR]   = (byte)( (MDR >> 24) & 0x000000FF ); // MSB: 8 first bits
-                            memory[MAR+1] = (byte)( (MDR >> 16) & 0x000000FF );
-                            memory[MAR+2] = (byte)( (MDR >> 8) & 0x000000FF );
-                            memory[MAR+3] = (byte)( MDR % 0x100 );
-                            logger.fine( dsz.strValue()
-                                            + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
-                                            + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1])
-                                            + "\n\t\t\tmemory[" + (MAR+2) + "] now = " + byteInHex(memory[MAR+2])
-                                            + "\n\t\t\tmemory[" + (MAR+3) + "] now = " + byteInHex(memory[MAR+3]));
-                        }
-                        default -> {
-                            logger.logError( "\n*** INVALID data size: " + dsz.strValue() );
-                            H = true;
-                        }
-                    }
-                }
-            }
-            else { // INVALID Memory Address
+            if( MAR >= MemorySize ) { // INVALID Memory Address
                 logger.logError("\n*** INVALID address: " + MAR);
                 H = true ; // End of simulation...!
+                return;
+            }
+            if( RW ) { // true = READ = copy an element from memory to the CPU's MDR
+                switch (dsz) {
+                    case byteSize -> MDR = memory[MAR];
+//                    case wordSize -> MDR = memory[MAR] * 0x100 + memory[MAR + 1];
+                    // addition of memory addresses DOES NOT WORK because Java only does SIGNED addition
+                    case wordSize -> {
+                        byte mem0 = memory[MAR] ;
+                        byte mem1 = memory[MAR+1] ;
+                        logger.fine( "Memory[" + MAR + "] = " + mem0 + " | " + byteInHex(mem0) );
+                        logger.fine( "Memory[" + (MAR+1) + "] = " + mem1 + " | " + byteInHex(mem1) );
+                        int mdrt1 = ( (mem0 * 0x100) & 0x0000FF00 ) | ( mem1 & 0x000000FF );
+                        logger.fine( "mdrt1 = " + mdrt1 + " | " + intHex(mdrt1) );
+                        MDR = mdrt1 ;
+                    }
+                    case longSize -> MDR = ( (memory[MAR] * 0x1000000) & 0xFF000000 ) |
+                                           ( (memory[MAR+1] * 0x10000) & 0x00FF0000 ) |
+                                           ( (memory[MAR+2] * 0x100) & 0x0000FF00 ) |
+                                           (  memory[MAR+3] & 0x000000FF );
+                    default -> {
+                        logger.logError("\n*** INVALID data size: " + dsz.strValue());
+                        H = true;
+                    }
+                }
+                logger.info("READ of " + dsz.strValue() + ": now MDR = " + MDR + " | "  + intHex(MDR));
+                return;
+            }
+            // false = WRITE = copy an element from the CPU's MDR to memory
+            logger.info( "WRITE of " + dsz.strValue() + ": MAR = " + MAR + " | MDR = " + intHex(MDR) );
+            switch (dsz) {
+                case byteSize -> {
+                    memory[MAR] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
+                    logger.fine( dsz.strValue() + ".WRITE: now memory[" + MAR + "] = " + byteInHex(memory[MAR]) );
+                }
+                case wordSize -> {
+//                    memory[MAR]   = (byte)( (MDR / 0x100) % 0x100 ); // MSB: 8 first bits
+                    // division DOES NOT WORK because Java rounds to a whole integer instead of just dropping the fraction part
+                    byte mdrb = (byte)( (MDR >> 8) & 0x000000FF );
+                    logger.finer( "mdrb = " + mdrb + " | " + intHex(mdrb) );
+                    memory[MAR]   = mdrb; // MSB: 8 first bits
+                    memory[MAR+1] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
+                    logger.fine( dsz.strValue()
+                                    + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
+                                    + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1]) );
+                }
+                case longSize -> {
+                    memory[MAR]   = (byte)( (MDR >> 24) & 0x000000FF );
+                    memory[MAR+1] = (byte)( (MDR >> 16) & 0x000000FF );
+                    memory[MAR+2] = (byte)( (MDR >> 8) & 0x000000FF );
+                    memory[MAR+3] = (byte)( MDR % 0x100 );
+                    logger.fine( dsz.strValue()
+                                    + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
+                                    + "\n\t\t\tmemory[" + (MAR+1) + "] now = " + byteInHex(memory[MAR+1])
+                                    + "\n\t\t\tmemory[" + (MAR+2) + "] now = " + byteInHex(memory[MAR+2])
+                                    + "\n\t\t\tmemory[" + (MAR+3) + "] now = " + byteInHex(memory[MAR+3]));
+                }
+                default -> {
+                    logger.logError( "\n*** INVALID data size: " + dsz.strValue() );
+                    H = true;
+                }
             }
         }
     }
@@ -505,6 +545,7 @@ class Sim68k {
     /** simulates fetch and execute */
     class Controller {
         Controller() {
+            logger.logInit();
             TMPD = new TempReg();
             TMPS = new TempReg();
             TMPR = new TempReg(); // Temporary Registers Dest, Src, Result
@@ -546,7 +587,7 @@ class Sim68k {
             PC += 2 ;
             mem.access( DataSize.wordSize, READ );
             logger.info( "MDR = " + intHex(MDR) );
-            OpCode = getWord(MDR, LEAST); // get LSW from MDR
+            OpCode = (short) getWord(MDR, LEAST); // get LSW from MDR
         }
 
         /** Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and opcData */
@@ -584,13 +625,13 @@ class Sim68k {
 
         /** Fetch the operands, according to their number (numOprd) and addressing modes (M1 or M2) */
         void fetchOperands() {
-            logger.config(numOprd + ": at PC = " + (PC-2) + ": M1 = " + M1 + ", M2 = " + M2);
+            logger.config(numOprd + " operands at PC = " + (PC-2) + ": M1 = " + M1 + ", M2 = " + M2);
 
             // Fetch the address of 1st operand (in OpAddr1)
             if( formatF1(OpId) && (M1 == AddressMode.RELATIVE_ABSOLUTE) ) {
                 MAR = PC ;
                 mem.access( DataSize.wordSize, READ );
-                OpAddr1 = getWord( MDR, LEAST ); // get LSW of MDR
+                OpAddr1 = (short) getWord( MDR, LEAST ); // get LSW of MDR
                 PC += 2 ;
             }
 
@@ -599,32 +640,32 @@ class Sim68k {
             if( M2 == AddressMode.RELATIVE_ABSOLUTE ) {
                 MAR = PC ;
                 mem.access( DataSize.wordSize, READ );
-                OpAddr2 = getWord( MDR, LEAST ); // get LSW of MDR
+                OpAddr2 = (short) getWord( MDR, LEAST ); // get LSW of MDR
                 PC += 2 ;
             }
 
             // Check invalid number of operands.
             if( numOprd == 2  &&  !formatF1(OpId) ) {
-                logger.logError("INVALID number of operands for " + Mnemo[OpId] + " at PC = " + (PC-2));
+                logger.logError( "INVALID number of operands for " + Mnemo[OpId] + " at PC = " + (PC-2) );
                 H = true ;
             }
         }
 
-        /** set Status bits Z (zero) and N (negative) */
+        /** set Status bits Z (zero) and N (negative) according to the value in tr */
         void setZN( TempReg tr ) {
             int trVal = tr.get();
             switch (DS) {
                 case byteSize -> {
-                    Z = getBits( getWord(trVal, LEAST), 0, 7 ) == 0;
-                    N = getBits( getWord(trVal, LEAST), 7, 7 ) == 1;
+                    Z = getBits( (short) getWord(trVal, LEAST), 0, 7 ) == 0;
+                    N = getBits( (short) getWord(trVal, LEAST), 7, 7 ) == 1;
                 }
                 case wordSize -> {
-                    Z = ( getBits( getWord(trVal, LEAST), 0, 15 )  == 0 );
-                    N = ( getBits( getWord(trVal, LEAST), 15, 15 ) == 1 );
+                    Z = getBits( (short) getWord(trVal, LEAST), 0, 15 )  == 0 ;
+                    N = getBits( (short) getWord(trVal, LEAST), 15, 15 ) == 1 ;
                 }
                 case longSize -> {
-                    Z = ( trVal == 0 );
-                    N = ( getBits( getWord(trVal, MOST), 15, 15 ) == 1 );
+                    Z = trVal == 0 ;
+                    N = getBits( (short) getWord(trVal, MOST), 15, 15 ) == 1 ;
                 }
                 default -> {
                     logger.logError( "INVALID data size '" + DS + "' at PC = " + (PC-2) );
@@ -633,19 +674,25 @@ class Sim68k {
             }
         }
 
-        /** The calculations for V (overflow) and C (carry) are easier with these values */
+        /**
+         *  Get the most significant bits of TMPD, TMPS and TMPR <br>
+         *  The calculations for V (overflow) and C (carry) use these values
+         */
         void setSmDmRm( TempReg trS, TempReg trD, TempReg trR ) {
-            byte mostSigBit = 15 ; // wordSize
+            byte mostSigBit ; // wordSize
             switch( DS ) {
-                case byteSize: mostSigBit =  7 ; break;
-                case wordSize: break;
-                case longSize: mostSigBit = 31 ; break;
-                default: logger.logError("INVALID data size '" + DS + "' at PC = " + (PC-2));
-                         H = true ;
+                case byteSize -> mostSigBit =  7 ;
+                case wordSize -> mostSigBit = 15 ; // wordSize
+                case longSize -> mostSigBit = 31 ;
+                default -> {
+                    logger.logError( "INVALID data size '" + DS + "' at PC = " + (PC-2) );
+                    H = true ;
+                    return ;
+                }
             }
-            Sm = ( getBits( (short)trS.get(), mostSigBit, mostSigBit) == 1 );
-            Dm = ( getBits( (short)trD.get(), mostSigBit, mostSigBit) == 1 );
-            Rm = ( getBits( (short)trR.get(), mostSigBit, mostSigBit) == 1 );
+            Sm = getBits( (short)trS.get(), mostSigBit, mostSigBit ) == 1 ;
+            Dm = getBits( (short)trD.get(), mostSigBit, mostSigBit ) == 1 ;
+            Rm = getBits( (short)trR.get(), mostSigBit, mostSigBit ) == 1 ;
         }
 
         /** The execution of each instruction is done via its micro-program */
@@ -655,7 +702,7 @@ class Sim68k {
                             + ": OpAd1 = " + OpAddr1 + ", OpAd2 = " + OpAddr2
                             + "\n\tM1 = " + M1 + ", R1 = " + R1 + ", M2 = " + M2 + ", R2 = " + R2 );
 
-            /* Execute the instruction according to opCode
+            /* Execute an instruction according to the OpId from the current opCode
                Use a CASE structure where each case corresponds to an instruction & its micro-program  */
             switch( OpId ) {
                 // addition
@@ -828,61 +875,64 @@ class Sim68k {
                     break;
                 // shift left
                 case iLSL:
+                    logger.info( "iLSL: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    TMPR.set( TMPD.get() + opcData );
+                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    TMPR.set( TMPD.get() << opcData );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
+                    C = false;
                     if( opcData > 0 )
-                        C = getBits( (short) TMPD.get(), DS.sizeValue() * 8 - opcData, DS.sizeValue() * 8 - opcData ) == 1;
-                    else
-                        C = false;
+                        C = getBits( (short)TMPD.get(), (DS.sizeValue()*8 - opcData), (DS.sizeValue()*8 - opcData) ) == 1;
                     TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // shift right
                 case iLSR:
-                    /*
-                     In Turbo Pascal, SHR did NOT sign-extend, whereas >> in C is "machine-dependent" and in this platform
-                     (Linux x86_64) it DOES sign extension for variables, so DO NOT get the proper answer for some operations.
-                     We want to ensure there is NEVER any sign extension, to duplicate the Pascal results,
-                     HOWEVER C does NOT sign-extend CONSTANTS, so CANNOT correct for sign extension by doing this:
-                     TMPR = TMPS & !( 0x80000000 >> (opcData-1) ) as the constant 0x80000000 is NOT extended!
-                     Instead, need to put 0x80000000 in a register and proceed as below:
-                     */
+                    logger.info( "iLSR: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    logger.info("TMPD = " + TMPD.hex() + "; opcData = " + opcData);
-                    TMPS.set( 0x80000000 );
-                    TMPR.set( TMPS.get() >> (opcData-1) );
-                    logger.info("TMPS = " + TMPS.hex() + "; TMPR = TMPS >> " + (opcData-1) + " = " + TMPR.hex() );
-                    TMPS.set( ~( TMPR.get()) );
-                    logger.info("TMPS = !TMPR = " + TMPS.hex() );
-                    TMPR.set( ( TMPD.get() >> opcData) & TMPS.get() );
+                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    TMPR.set( TMPD.get() >>> opcData );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
-                    C = (opcData > 0) && ( getBits( (short) TMPD.get(), opcData - 1, opcData - 1 ) == 1 );
+                    C = (opcData > 0) && getBits( (short)TMPD.get(), opcData-1, opcData-1 ) == 1 ;
                     TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate left
                 case iROL:
+                    logger.info( "iROL: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    opcData = (byte) (opcData % (8 * DS.sizeValue() ));
-                    TMPR.set( TMPD.get() + opcData );
-                    TMPS.set( TMPD.get() >> ((8*DS.sizeValue()) - opcData) );
-                    TMPR.set( setBits( TMPR.get(), (byte)0, (byte)(opcData-1), (short) TMPS.get()) );
+                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    opcData = (byte)( opcData % (8 * DS.sizeValue()) );
+                    logger.info( "iROL: opcData = " + opcData );
+                    TMPR.set( TMPD.get() << opcData );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
+                    TMPS.set( TMPD.get() >>> ((8*DS.sizeValue()) - opcData) );
+                    logger.info( "TMPS = " + intHex(TMPS.get()) );
+                    TMPR.set( setBits(TMPR.get(), (byte)0, (byte)(opcData-1), (short)TMPS.get()) );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
                     C = (opcData > 0)
-                        && ( getBits( (short) TMPD.get(), (DS.sizeValue() * 8)-opcData, (DS.sizeValue()*8)-opcData ) == 1 );
+                        && getBits( (short)TMPD.get(), (DS.sizeValue()*8)-opcData, (DS.sizeValue()*8)-opcData ) == 1 ;
                     TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // rotate right
                 case iROR:
+                    logger.info( "iROR: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    opcData = (byte) (opcData % ( 8*DS.sizeValue() ));
-                    TMPR.set( TMPD.get() >> opcData );
-                    TMPR.set( setBits( TMPR.get(), (byte)(8*DS.sizeValue()-opcData), (byte)(8*DS.sizeValue()-1), (short) TMPD.get()) );
+                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    opcData = (byte)( opcData % (8*DS.sizeValue()) );
+                    logger.info( "iROR: opcData = " + opcData );
+                    TMPR.set( TMPD.get() >>> opcData );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
+                    TMPR.set( setBits( TMPR.get(), (byte)(8*DS.sizeValue()-opcData),
+                                       (byte)(8*DS.sizeValue()-1), (short)TMPD.get() ) );
+                    logger.info( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
-                    C = (opcData > 0) && ( getBits( (short) TMPD.get(), opcData - 1, opcData - 1 ) == 1 );
+                    C = (opcData > 0) && ( getBits((short) TMPD.get(), opcData-1, opcData-1) == 1 );
                     TMPR.write( OpAddr2, DS, M2, R2 );
                     break;
                 // compare
@@ -972,7 +1022,7 @@ class Sim68k {
                             "Invalid Addressing Mode" )
                             && checkCond( (DS == DataSize.wordSize), "Invalid Data Size" ) )
                         //setResult( OpAddr1, OpAddr2, DS, M2, R2 );
-                        AR[R2] = getWord( OpAddr1, LEAST );
+                        AR[R2] = (short) getWord( OpAddr1, LEAST );
                     break;
                 // input
                 case iINP:
@@ -1002,7 +1052,7 @@ class Sim68k {
                     System.out.print(": ");
                     String inpStr;
                     int radix = 10;
-                    long inpl = 0;
+                    long inpl;
                     try {
                         Scanner inpScanner = new Scanner( System.in );
                         inpStr = inpScanner.next();
@@ -1011,18 +1061,14 @@ class Sim68k {
                             radix = 16 ;
                             inpStr = inpStr.substring(1) ;
                         }
+                        // Java only has signed numbers, so need a long to accept numbers like 0xFFFFFFFF
                         inpl = Long.parseLong( inpStr, radix );
                         logger.info("Long.parseLong(" + inpStr + ", " + radix + ") = " + inpl);
                     }
                     catch (Exception e) {
                         e.printStackTrace();
+                        return ;
                     }
-                    /*
-                     * On Windows, where the size of long is 4 bytes, even on my Windows 10 x64 laptop,
-                     * strtol() evaluates String "0xFFFFFFFF" to int 0x7FFFFFFF!!
-                     * Use strtoull() to ensure the maximum size to store our input without problems interpreting sign.
-                     * Seems to work, so far, for both Linux x86_64 and Windows x64...
-                     */
                     TMPD.set( (int)inpl );
                     logger.info("TMPD = " + TMPD.hex() );
                     setZN( TMPD );
@@ -1042,7 +1088,7 @@ class Sim68k {
                         case ADDRESS_REGISTER_INDIRECT_PREDEC -> System.out.print( "[" + AR[R1] + "] = ");
                         case RELATIVE_ABSOLUTE -> System.out.print( "[" + intHex(OpAddr1) + "] = " );
                         default -> {
-                            logger.logError( "\n>>> INVALID address mode '" + M1
+                            logger.logError( "\n\t>>> INVALID address mode '" + M1
                                                 + "' for instruction '" + Mnemo[OpId] + "' at PC = " + (PC-2) );
                             H = true;
                             return;
@@ -1055,7 +1101,7 @@ class Sim68k {
                                                                 + " (" + DataSize.wordSize.strValue() + ")" );
                         case longSize -> System.out.println( intHex(TMPS.get()) + " (" + DataSize.longSize.strValue() + ")" );
                         default -> {
-                            logger.logError( "\n>>> INVALID data size '" + DS
+                            logger.logError( "\n\t>>> INVALID data size '" + DS
                                              + "' for instruction '" + Mnemo[OpId] + "' at PC = " + (PC-2) );
                             H = true;
                             return;
@@ -1086,6 +1132,7 @@ class Sim68k {
     /** simulates a CPU */
     class Processor {
         Processor() {
+            logger.logInit();
             DR = new int[2] ;
             AR = new short[2] ;
             ctrl = new Controller();
@@ -1226,44 +1273,48 @@ class Sim68k {
         String input = "0";
         int t;
         String hexstr;
-        Scanner inScanner = new Scanner(System.in);
 
         // Menu
-        while( !input.equals(QUIT) ) {
-            System.out.print("Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): ");
-            // read the next word
-            input = inScanner.next().toLowerCase();
-            logger.finer("input = " + input);
-            switch (input) {
-                case EXECUTE -> {
-                    // execution on the simulator
-                    System.out.print( "Name of the 68k binary program ('.68b' will be added automatically): " );
-                    input = inScanner.next();
-                    logger.finer( "input = " + input );
-                    if( proc.loadProgram( input + ".68b" ) )
-                        proc.start();
-                    else
-                        logger.logError( "PROBLEM with loading File '" + input + ".68b'!" );
+        try( Scanner inScanner = new Scanner(System.in) ) {
+            while( !input.equals(QUIT) ) {
+                System.out.print( "Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): " );
+                // read the next word
+                input = inScanner.next().toLowerCase();
+                logger.finer( "input = " + input );
+                switch (input) {
+                    case EXECUTE -> {
+                        // execution on the simulator
+                        System.out.print( "Name of the 68k binary program ('.68b' will be added automatically): " );
+                        input = inScanner.next();
+                        logger.finer( "input = " + input );
+                        if( proc.loadProgram( input + ".68b" ) )
+                            proc.start();
+                        else
+                            logger.logError( "PROBLEM loading File '" + input + ".68b'!" );
+                    }
+                    case TEST -> {
+                        // info on system data sizes
+                        System.out.println( "sizeof( byte ) == " + Byte.BYTES );
+                        System.out.println( "sizeof( char ) == " + Character.BYTES );
+                        System.out.println( "sizeof( short ) == " + Short.BYTES );
+                        System.out.println( "sizeof( int ) == " + Integer.BYTES );
+                        System.out.println( "sizeof( long ) == " + Long.BYTES );
+                        t = 0xFFFFFFFF;
+                        System.out.println( "int t = 0xFFFFFFFF = " + t + " = " + intHex( t ) );
+                        hexstr = "FFFFFFFF";
+                        System.out.println( "String hexstr = " + hexstr );
+                        long l = Long.parseLong( hexstr, 16 );
+                        System.out.println( "Long.parseLong(" + hexstr + ") = " + l + " = " + Long.toHexString( l ) );
+                    }
+                    case QUIT -> System.out.println( "Bye!" );
+                    default -> System.out.println( "Invalid Option. Please enter '" + EXECUTE + "' or '" + QUIT + "'." );
                 }
-                case TEST -> {
-                    // info on system data sizes
-                    System.out.println( "sizeof( byte ) == " + Byte.BYTES );
-                    System.out.println( "sizeof( char ) == " + Character.BYTES );
-                    System.out.println( "sizeof( short ) == " + Short.BYTES );
-                    System.out.println( "sizeof( int ) == " + Integer.BYTES );
-                    System.out.println( "sizeof( long ) == " + Long.BYTES );
-                    t = 0xFFFFFFFF;
-                    System.out.println( "int t = 0xFFFFFFFF = " + t + " = " + intHex(t) );
-                    hexstr = "FFFFFFFF";
-                    System.out.println( "String hexstr = " + hexstr );
-                    long l = Long.parseLong( hexstr, 16 );
-                    System.out.println( "Long.parseLong(" + hexstr + ") = " + l + " = " + Long.toHexString(l) );
-                }
-                case QUIT -> System.out.println( "Bye!" );
-                default -> System.out.println( "Invalid Option. Please enter '" + EXECUTE + "' or '" + QUIT + "'." );
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.logError( "PROBLEM RUNNING PROGRAM!" );
+            System.exit( 1315 );
         }
-        inScanner.close();
         logger.info("\tPROGRAM ENDED");
     }
 }
