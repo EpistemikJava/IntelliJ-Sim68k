@@ -37,8 +37,10 @@
 /    MOVE.L @Const1, D0   ; / $C5 $60 $00 $04
 /    MOVE.L @Const2, D1   ; / $C5 $61 $00 $08
 /    LSL.W #$3, D0        ; / $62 $30
+/ diff /
 /    DSP.L D0             ; / $EC $00
 /    LSR.W #$3, D0        ; / $6A $30
+/ diff /
 /    DSP.L D0             ; / $EC $00
 /    DSR.B                ; / $F0 $00
 /    LSR.W #$3, D1        ; / $6A $31
@@ -79,14 +81,18 @@
 /    MOVE.L @Const1, D0   ; / $C5 $60 $00 $04
 /    MOVE.L @Const2, D1   ; / $C5 $61 $00 $08
 /    ROL.W #$3, D0        ; / $72 $30
+/ diff /
 /    DSP.L D0             ; / $EC $00
 /    ROR.W #$3, D0        ; / $7A $30
+/ diff /
 /    DSP.L D0             ; / $EC $00
 /    DSR.B                ; / $F0 $00
 /    ROR.W #$3, D1        ; / $7A $31
+/ diff /
 /    DSP.L D1             ; / $EC $10
 /    DSR.B                ; / $F0 $00
 /    ROL.W #$3, D1        ; / $72 $31
+/ diff /
 /    DSP.L D1             ; / $EC $10
 /  /
 / ; Test ROL and ROR (long) /
