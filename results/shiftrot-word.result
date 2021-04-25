@@ -1,0 +1,15 @@
+[ D0 ]  = $F0F08780 (long)
+[ D0 ]  = $F0F010F0 (long)
+Status Bits: H:FALSE N:FALSE Z:FALSE V:FALSE C:FALSE
+[ D1 ]  = $0F0F01E1 (long)
+Status Bits: H:FALSE N:FALSE Z:FALSE V:FALSE C:TRUE
+[ D1 ]  = $0F0F0F08 (long)
+
+[ D0 ]  = $F0F08787 (long)
+[ D0 ]  = $F0F0F0F0 (long)
+Status Bits: H:FALSE N:TRUE Z:FALSE V:FALSE C:TRUE
+[ D1 ]  = $0F0FE1E1 (long)
+Status Bits: H:FALSE N:TRUE Z:FALSE V:FALSE C:TRUE
+[ D1 ]  = $0F0F0F0F (long)
+
+End of program Execution.
