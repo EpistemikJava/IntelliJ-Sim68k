@@ -1,0 +1,23 @@
+Enter a value (word) for the register D0: -5
+Enter a value (word) for the register D1: -5
+[ D0 ]  = $00000019 (long)
+Enter a value (long) for the register D0: $FFFF0000
+Enter a value (word) for the register D1: $7E
+[ D0 ]  = $FFF0FDF8 (long)
+Status Bits: H:FALSE N:TRUE Z:FALSE V:FALSE C:FALSE
+Enter a value (word) for the register D0: 10
+Enter a value (word) for the register D1: -10
+[ D0 ]  = $FFFFFF9C (long)
+Enter a value (long) for the register D0: 10
+Enter a value (word) for the register D1: -10
+[ D0 ]  = $0000FFFF (long)
+Status Bits: H:FALSE N:FALSE Z:FALSE V:FALSE C:FALSE
+Enter a value (word) for the register D0: $FFFF
+Enter a value (word) for the register D1: $FFFF
+[ D0 ]  = $00000001 (long)
+Enter a value (long) for the register D0: $0007FFFF
+Enter a value (word) for the register D1: $2
+[ D0 ]  = $0001FFFF (long)
+Status Bits: H:FALSE N:FALSE Z:FALSE V:TRUE C:FALSE
+
+End of program Execution.
