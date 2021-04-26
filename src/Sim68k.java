@@ -221,21 +221,28 @@ class Sim68k {
     }
 
     /** Get most or least significant word from an int <br>
-        MSW: false = Least Significant Word, true = Most Significant Word */
+     MSW: false = Least Significant Word, true = Most Significant Word */
     int getWord(final int nV, boolean MSW) {
-        if( MSW )
-            return (short)( nV >>> 16 );
-//            return (short)( (nV & 0xFFFF0000) >> 16 );
-
         logger.info( "nV = " + nV + " | " + intHex(nV) );
+        if( MSW )
+            return( nV >>> 16 );
+//            return (short)( (nV & 0xFFFF0000) >> 16 );
         int nvl = nV << 16 ;
         logger.info( "nvl = " + nvl + " | " + intHex(nvl) );
         int nvr = nvl >>> 16 ;
         logger.info( "nvr = " + nvr + " | " + intHex(nvr) );
-        short snvr = Integer.valueOf( nvl >>> 16 ).shortValue();
-        logger.info( "snvr = " + snvr + " | " + intHex(snvr) );
+//        short snvr = Integer.valueOf( nvl >>> 16 ).shortValue();
+//        logger.info( "snvr = " + snvr + " | " + intHex(snvr) );
 //        return (short)( nV & 0x0000FFFF );
         return nvr ;
+    }
+
+    /** Get most or least significant word from an int <br>
+        MSW: false = Least Significant Word, true = Most Significant Word */
+    short getShort(final int nV, boolean MSW) {
+        if( MSW )
+            return (short)( (nV & 0xFFFF0000) >> 16 );
+        return (short)( nV & 0x0000FFFF );
     }
 
     /** In an int set the bit indicated by posn to val (false or true) */
@@ -267,9 +274,9 @@ class Sim68k {
     /** In an int set one word indicated by MSW to val <br>
         MSW: false = Least Significant Word, true = Most Significant Word */
     int setWord(int nV, final boolean MSW, final int val) {
+        logger.info( "nV = " + nV + " | " + intHex(nV) );
+        logger.info( "val = " + val + " | " + intHex(val) );
         if( MSW ) {
-            logger.info( "nV = " + nV + " | " + intHex(nV) );
-            logger.info( "val = " + val + " | " + intHex(val) );
             int nvmod = nV & 0x0000FFFF ;
 //            int nvmod = nV >>> 16 ;
             logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
@@ -278,13 +285,19 @@ class Sim68k {
 //            return ( nV & 0x0000FFFF ) | ( val << 16 );
             return( nvmod | valmod );
         }
-        logger.info( "nV = " + nV + " | " + intHex(nV) );
-        logger.info( "val = " + val + " | " + intHex(val) );
         int nvmod = nV & 0xFFFF0000 ;
 //        int nvmod = (nV << 16) >>> 16 ;
         logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
 //        return (nV & 0xFFFF0000) | val ;
         return( nvmod | val );
+    }
+
+    /** In an int set one word indicated by MSW to val <br>
+     MSW: false = Least Significant Word, true = Most Significant Word */
+    int setShort(int nV, final boolean MSW, final short val) {
+        if( MSW )
+            return ( nV & 0x0000FFFF ) | ( val << 16 );
+        return (nV & 0xFFFF0000) | val ;
     }
 
     /** utility function for easy display of a byte value as an unsigned hex String */
@@ -656,16 +669,16 @@ class Sim68k {
             int trVal = tr.get();
             switch (DS) {
                 case byteSize -> {
-                    Z = getBits( (short) getWord(trVal, LEAST), 0, 7 ) == 0;
-                    N = getBits( (short) getWord(trVal, LEAST), 7, 7 ) == 1;
+                    Z = getBits( getShort(trVal, LEAST), 0, 7 ) == 0;
+                    N = getBits( getShort(trVal, LEAST), 7, 7 ) == 1;
                 }
                 case wordSize -> {
-                    Z = getBits( (short) getWord(trVal, LEAST), 0, 15 )  == 0 ;
-                    N = getBits( (short) getWord(trVal, LEAST), 15, 15 ) == 1 ;
+                    Z = getBits( getShort(trVal, LEAST), 0, 15 )  == 0 ;
+                    N = getBits( getShort(trVal, LEAST), 15, 15 ) == 1 ;
                 }
                 case longSize -> {
                     Z = trVal == 0 ;
-                    N = getBits( (short) getWord(trVal, MOST), 15, 15 ) == 1 ;
+                    N = getBits( getShort(trVal, MOST), 15, 15 ) == 1 ;
                 }
                 default -> {
                     logger.logError( "INVALID data size '" + DS + "' at PC = " + (PC-2) );
@@ -791,20 +804,20 @@ class Sim68k {
                             if( TMPS.get() > 0x8000 ) {
                                 i = 1;
                                 TMPS.set( (TMPS.get() ^ 0xFFFF) + 1 );
-                                TMPD.set( ~( TMPD.get()) + 1 );
+                                TMPD.set( ~(TMPD.get()) + 1 );
                             }
                             logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex());
                             if( (( TMPD.get() / TMPS.get() ) == 0) && (i == 1) ) {
-                                TMPR.set( setWord(TMPR.get(), LEAST, (short)0) );
+                                TMPR.set( setShort(TMPR.get(), LEAST, (short)0) );
                                 logger.info("TMPR = " + TMPR.hex() );
-                                TMPD.set( ~( TMPD.get()) + 1 );
+                                TMPD.set( ~(TMPD.get()) + 1 );
                                 logger.info("TMPD = " + TMPD.hex() );
-                                TMPR.set( setWord(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get())) );
+                                TMPR.set( setShort(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get())) );
                             }
                             else {
-                                TMPR.set( TMPD.get() / getWord(TMPS.get(), LEAST) );
+                                TMPR.set( TMPD.get() / getShort(TMPS.get(), LEAST) );
                                 logger.info("TMPR = " + TMPR.hex() );
-                                TMPR.set( setWord(TMPR.get(), MOST, (short)(TMPD.get() % getWord(TMPS.get(), LEAST))) );
+                                TMPR.set( setShort(TMPR.get(), MOST, (short)(TMPD.get() % getShort(TMPS.get(), LEAST))) );
                             }
                             logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") / TMPS(" + TMPS.hex() + ")");
                             setZN( TMPR );
