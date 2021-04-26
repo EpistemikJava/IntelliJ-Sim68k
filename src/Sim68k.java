@@ -75,22 +75,18 @@ class Sim68k {
     /** identify which byte within a long */
     enum TwoBits { byte0, byte1, byte2, byte3 }
 
-    /** indicate to an operation to use byte, word or long */
+    /**
+     *  Indicate to an operation to use byte, word or long <br>
+     *  Original requirements: <br>
+     *    A "byte" represents 2 hexadecimal digits ($00...$FF).<br>
+     *    A "word" represents 2 bytes ($0000...$FFFF).<br>
+     *    A "long" represents a long word which is 2 words, i.e., 4 bytes ($0000 0000 ... $FFFF FFFF).<br>
+     *    >> If a byte, word or long word represents data (i.e., a value)<br>
+     *       then it is interpreted as a signed binary integer in 2's CF.
+     */
     enum DataSize {
-        // 0x0..0xFF = 0x80..0x7F in 2's CF
-        // NEEDS to be an unsigned char to work properly
-        // typedef  unsigned char  byte ;
         byteSize((byte)1, "byte"),
-
-        // 0x0..0xFFFF = 0x8000..0x7FFF in 2's CF
-        // NEEDS to be an unsigned short to work properly
-        // typedef  unsigned short  word ;
         wordSize((byte)2, "word"),
-
-        // 0x0..0xFFFFFFFF = 0x80000000..0x7FFFFFFF in 2's CF
-        // NEED a signed value for this type to work properly
-        // use a typedef to ensure the int type we are using is signed
-        // typedef  signed int  long_68k ;
         longSize((byte)4, "long");
 
         private final byte size;
@@ -132,7 +128,7 @@ class Sim68k {
             logger.warning( "UNUSED ADDRESS MODE: AM_TWO_UNUSED!" );
             return AddressMode.AM_TWO_UNUSED ;
         }
-        if( code == 3 ) return AddressMode.RELATIVE_ABSOLUTE ;
+        if( code == 3 ) return AddressMode.RELATIVE_ABSOLUTE ; // i.e. relative OR absolute addressing
         if( code == 4 ) return AddressMode.ADDRESS_REGISTER_INDIRECT ;
         if( code == 5 ) {
             logger.warning( "UNUSED ADDRESS MODE: AM_FIVE_UNUSED!" );
@@ -226,14 +222,10 @@ class Sim68k {
         logger.info( "nV = " + nV + " | " + intHex(nV) );
         if( MSW )
             return( nV >>> 16 );
-//            return (short)( (nV & 0xFFFF0000) >> 16 );
         int nvl = nV << 16 ;
-        logger.info( "nvl = " + nvl + " | " + intHex(nvl) );
+        logger.finer( "nvl = " + nvl + " | " + intHex(nvl) );
         int nvr = nvl >>> 16 ;
-        logger.info( "nvr = " + nvr + " | " + intHex(nvr) );
-//        short snvr = Integer.valueOf( nvl >>> 16 ).shortValue();
-//        logger.info( "snvr = " + snvr + " | " + intHex(snvr) );
-//        return (short)( nV & 0x0000FFFF );
+        logger.finer( "nvr = " + nvr + " | " + intHex(nvr) );
         return nvr ;
     }
 
@@ -305,8 +297,13 @@ class Sim68k {
         return( HEX_MARKER + Integer.toHexString(Byte.toUnsignedInt(value)).toUpperCase(Locale.ROOT) );
     }
 
-    /** utility function for easy display of an int value as UNSIGNED hex and bit String */
+    /** utility function for easy display of an int value as UNSIGNED hex String */
     static String intHex(int value) {
+        return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) );
+    }
+
+    /** utility function for easy display of an int value as UNSIGNED hex AND bit String */
+    static String intHexBin(int value) {
         return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) + " | " + Integer.toBinaryString(value) );
     }
 
@@ -1095,10 +1092,10 @@ class Sim68k {
                     switch (M1) {
                         case DATA_REGISTER_DIRECT -> System.out.print( "[ D" + (int)R1 + " ]  = " );
                         case ADDRESS_REGISTER_DIRECT -> System.out.print( "[ A" + (int)R1 + " ]  = " );
-                        case ADDRESS_REGISTER_INDIRECT -> System.out.print( "[" + AR[R1] + " ] = " );
+                        case ADDRESS_REGISTER_INDIRECT -> System.out.print( "[" + intHex(AR[R1]) + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT_POSTINC -> // numBytes(DS) subtracted to compensate post-incrementation
-                                System.out.print( "[" + (AR[R1] - DS.sizeValue()) + " ] = " );
-                        case ADDRESS_REGISTER_INDIRECT_PREDEC -> System.out.print( "[" + AR[R1] + "] = ");
+                                System.out.print( "[" + intHex(AR[R1] - DS.sizeValue()) + " ] = " );
+                        case ADDRESS_REGISTER_INDIRECT_PREDEC -> System.out.print( "[" + intHex(AR[R1]) + "] = ");
                         case RELATIVE_ABSOLUTE -> System.out.print( "[" + intHex(OpAddr1) + "] = " );
                         default -> {
                             logger.logError( "\n\t>>> INVALID address mode '" + M1
