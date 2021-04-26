@@ -1203,6 +1203,7 @@ class Sim68k {
             }
 
             System.out.println("Program loaded. " + address + " bytes in memory.");
+            H = false ;
             return true ;
         }
 
@@ -1245,7 +1246,8 @@ class Sim68k {
 
         /** Fetch-Execute Cycle simulated */
         void start() {
-            logger.info( ">>>" );
+            logger.info( "\n\t>>> START PROGRAM >>>" );
+            PC = 0;
             do // Repeat the Fetch-Execute Cycle until the Halt bit becomes true
             {
                 ctrl.fetchOpCode();
@@ -1281,22 +1283,19 @@ class Sim68k {
         mem = new Memory();
         Processor proc = new Processor();
         String input = "0";
-        int t;
-        String hexstr;
-
-        // Menu
+        // main menu
         try( Scanner inScanner = new Scanner(System.in) ) {
             while( !input.equals(QUIT) ) {
                 System.out.print( "Your Option ('" + EXECUTE + "' to execute a program, '" + QUIT + "' to quit): " );
                 // read the next word
                 input = inScanner.next().toLowerCase();
-                logger.finer( "input = " + input );
-                switch (input) {
+                logger.info( "option input = " + input );
+                switch( input ) {
                     case EXECUTE -> {
                         // execution on the simulator
                         System.out.print( "Name of the 68k binary program ('.68b' will be added automatically): " );
                         input = inScanner.next();
-                        logger.finer( "input = " + input );
+                        logger.info( "program input = " + input );
                         if( proc.loadProgram( input + ".68b" ) )
                             proc.start();
                         else
@@ -1309,9 +1308,9 @@ class Sim68k {
                         System.out.println( "sizeof( short ) == " + Short.BYTES );
                         System.out.println( "sizeof( int ) == " + Integer.BYTES );
                         System.out.println( "sizeof( long ) == " + Long.BYTES );
-                        t = 0xFFFFFFFF;
+                        int t = 0xFFFFFFFF;
                         System.out.println( "int t = 0xFFFFFFFF = " + t + " = " + intHex( t ) );
-                        hexstr = "FFFFFFFF";
+                        String hexstr = "FFFFFFFF";
                         System.out.println( "String hexstr = " + hexstr );
                         long l = Long.parseLong( hexstr, 16 );
                         System.out.println( "Long.parseLong(" + hexstr + ") = " + l + " = " + Long.toHexString( l ) );
