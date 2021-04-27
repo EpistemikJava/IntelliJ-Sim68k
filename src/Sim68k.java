@@ -272,7 +272,7 @@ class Sim68k {
             int nvmod = nV & 0x0000FFFF ;
 //            int nvmod = nV >>> 16 ;
             logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
-            short valmod = (short) (val << 16);
+            short valmod = (short)(val << 16);
             logger.info( "valmod = " + valmod + " | " + intHex(valmod) );
 //            return ( nV & 0x0000FFFF ) | ( val << 16 );
             return( nvmod | valmod );
@@ -288,7 +288,7 @@ class Sim68k {
      MSW: false = Least Significant Word, true = Most Significant Word */
     int setShort(int nV, final boolean MSW, final short val) {
         if( MSW )
-            return ( nV & 0x0000FFFF ) | ( val << 16 );
+            return (nV & 0x0000FFFF) | (val << 16) ;
         return (nV & 0xFFFF0000) | val ;
     }
 
@@ -304,7 +304,8 @@ class Sim68k {
 
     /** utility function for easy display of an int value as UNSIGNED hex AND bit String */
     static String intHexBin(int value) {
-        return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) + " | " + Integer.toBinaryString(value) );
+        return( value + " | " + HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT)
+                + " | " + Integer.toBinaryString(value) );
     }
 
     /*
@@ -352,8 +353,13 @@ class Sim68k {
                     set( DR[regNo] );
                     if( dsz == DataSize.byteSize )
                         set( setByte(get(), TwoBits.byte1, (byte)0) );
-                    if( dsz.sizeValue() <= DataSize.wordSize.sizeValue() )
-                        set( setWord(get(), MOST, (short)0) );
+                    if( dsz.sizeValue() <= DataSize.wordSize.sizeValue() ) {
+                        int sw1 = setWord( get(), MOST, 0 );
+                        logger.info( "setWord1 = " + intHexBin(sw1) );
+                        int ss1 = setShort( get(), MOST, (short)0 );
+                        logger.info( "setShort1 = " + intHexBin(ss1) );
+                        set( sw1 );
+                    }
                 }
                 case ADDRESS_REGISTER_DIRECT -> set( AR[regNo] );
 
@@ -410,7 +416,12 @@ class Sim68k {
                             logger.info( "temp value = " + get() + " | " + intHex(get()) );
                             int lsw = getWord(get(), LEAST);
                             logger.info( "LSW of temp value = " + lsw + " | " + intHex(lsw) );
-                            int newDR = setWord( dr, LEAST, lsw );
+
+                            int sw1 = setWord( dr, LEAST, lsw );
+                            logger.info( "setWord1 = " + intHexBin(sw1) );
+                            int ss1 = setShort( dr, LEAST, (short)lsw );
+                            logger.info( "setShort1 = " + intHexBin(ss1) );
+                            int newDR = sw1 ;
                             logger.info( "new DR = " + newDR + " | " + intHex(newDR) );
 //                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
                             DR[RegNo] = newDR;
@@ -707,7 +718,6 @@ class Sim68k {
 
         /** The execution of each instruction is done via its micro-program */
         void execInstr() {
-            byte i = 0 ; // counter
             logger.config( Mnemo[OpId] + "." + DS.strValue()
                             + ": OpAd1 = " + OpAddr1 + ", OpAd2 = " + OpAddr2
                             + "\n\tM1 = " + M1 + ", R1 = " + R1 + ", M2 = " + M2 + ", R2 = " + R2 );
@@ -791,6 +801,7 @@ class Sim68k {
                     break;
                 // signed division
                 case iDIVS:
+                    boolean flag = false ;
                     if( checkCond( (DS == DataSize.longSize), "Invalid Data Size" ) ) {
                         TMPS.fill( OpAddr1, DataSize.wordSize, M1, R1);
                         logger.info("TMPS = " + TMPS.hex() );
@@ -799,22 +810,37 @@ class Sim68k {
                             logger.info("TMPD = " + TMPD.hex());
                             V = ( (TMPD.get() / TMPS.get()) < -32768 ) | ( (TMPD.get() / TMPS.get()) > 32767 );
                             if( TMPS.get() > 0x8000 ) {
-                                i = 1;
+                                flag = true;
                                 TMPS.set( (TMPS.get() ^ 0xFFFF) + 1 );
                                 TMPD.set( ~(TMPD.get()) + 1 );
                             }
                             logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex());
-                            if( (( TMPD.get() / TMPS.get() ) == 0) && (i == 1) ) {
-                                TMPR.set( setShort(TMPR.get(), LEAST, (short)0) );
+                            if( ((TMPD.get() / TMPS.get()) == 0)  &&  flag ) {
+                                int sw1 = setWord( TMPR.get(), LEAST, 0 );
+                                logger.info( "setWord1 = " + intHexBin(sw1) );
+                                int ss1 = setShort( TMPR.get(), LEAST, (short)0 );
+                                logger.info( "setShort1 = " + intHexBin(ss1) );
+                                TMPR.set( sw1 );
                                 logger.info("TMPR = " + TMPR.hex() );
+
                                 TMPD.set( ~(TMPD.get()) + 1 );
                                 logger.info("TMPD = " + TMPD.hex() );
-                                TMPR.set( setShort(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get())) );
+                                int sw2 = setWord( TMPR.get(), MOST, (TMPD.get() % TMPS.get()) );
+                                logger.info( "setWord2 = " + intHexBin(sw2) );
+                                int ss2 = setShort(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get()));
+                                logger.info( "setShort2 = " + intHexBin(ss2) );
+                                TMPR.set( sw2 );
                             }
                             else {
                                 TMPR.set( TMPD.get() / getShort(TMPS.get(), LEAST) );
-                                logger.info("TMPR = " + TMPR.hex() );
-                                TMPR.set( setShort(TMPR.get(), MOST, (short)(TMPD.get() % getShort(TMPS.get(), LEAST))) );
+                                logger.info("now TMPR = " + TMPR.hex() );
+                                int sw3 = setWord( TMPR.get(), MOST, (TMPD.get() % getShort(TMPS.get(), LEAST)) );
+                                logger.info( "setWord3 = " + intHexBin(sw3) );
+                                int ss3 = setShort( TMPR.get(), MOST, (short)(TMPD.get() % getShort(TMPS.get(), LEAST)) );
+                                logger.info( "setShort3 = " + intHexBin(ss3) );
+                                int ssd = (TMPR.get() & 0x0000FFFF) | ((short)(TMPD.get() % getShort(TMPS.get(),LEAST)) << 16);
+                                logger.info( "ssd = " + intHexBin(ssd) );
+                                TMPR.set( ssd );
                             }
                             logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") / TMPS(" + TMPS.hex() + ")");
                             setZN( TMPR );
@@ -855,7 +881,7 @@ class Sim68k {
                     TMPS.fill( OpAddr1, DS, M1, R1 );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
                     TMPR.set( TMPD.get() & TMPS.get() );
-                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") & TMPS(" + TMPS.hex() + ")");
+                    logger.fine("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") & TMPS(" + TMPS.hex() + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -866,7 +892,7 @@ class Sim68k {
                     TMPS.fill( OpAddr1, DS, M1, R1 );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
                     TMPR.set( TMPD.get() | TMPS.get() );
-                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") | TMPS(" + TMPS.hex() + ")");
+                    logger.fine("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") | TMPS(" + TMPS.hex() + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -877,7 +903,7 @@ class Sim68k {
                     TMPS.fill( OpAddr1, DS, M1, R1 );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
                     TMPR.set( TMPD.get() ^ TMPS.get() );
-                    logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") ^ TMPS(" + TMPS.hex() + ")");
+                    logger.fine("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") ^ TMPS(" + TMPS.hex() + ")");
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -885,11 +911,11 @@ class Sim68k {
                     break;
                 // shift left
                 case iLSL:
-                    logger.info( "iLSL: opcData = " + opcData );
+                    logger.fine( "iLSL: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    logger.fine( "TMPD = " + intHex(TMPD.get()) );
                     TMPR.set( TMPD.get() << opcData );
-                    logger.info( "TMPR = " + intHex(TMPR.get()) );
+                    logger.fine( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -899,11 +925,11 @@ class Sim68k {
                     break;
                 // shift right
                 case iLSR:
-                    logger.info( "iLSR: opcData = " + opcData );
+                    logger.fine( "iLSR: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    logger.fine( "TMPD = " + intHex(TMPD.get()) );
                     TMPR.set( TMPD.get() >>> opcData );
-                    logger.info( "TMPR = " + intHex(TMPR.get()) );
+                    logger.fine( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
                     V = false;
                     C = (opcData > 0) && getBits( (short)TMPD.get(), opcData-1, opcData-1 ) == 1 ;
@@ -911,15 +937,15 @@ class Sim68k {
                     break;
                 // rotate left
                 case iROL:
-                    logger.info( "iROL: opcData = " + opcData );
+                    logger.fine( "iROL: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    logger.fine( "TMPD = " + intHex(TMPD.get()) );
                     opcData = (byte)( opcData % (8 * DS.sizeValue()) );
-                    logger.info( "iROL: opcData = " + opcData );
+                    logger.fine( "iROL: opcData = " + opcData );
                     TMPR.set( TMPD.get() << opcData );
-                    logger.info( "TMPR = " + intHex(TMPR.get()) );
+                    logger.fine( "TMPR = " + intHex(TMPR.get()) );
                     TMPS.set( TMPD.get() >>> ((8*DS.sizeValue()) - opcData) );
-                    logger.info( "TMPS = " + intHex(TMPS.get()) );
+                    logger.fine( "TMPS = " + intHex(TMPS.get()) );
                     TMPR.set( setBits(TMPR.get(), (byte)0, (byte)(opcData-1), (short)TMPS.get()) );
                     logger.info( "TMPR = " + intHex(TMPR.get()) );
                     setZN( TMPR );
@@ -930,11 +956,11 @@ class Sim68k {
                     break;
                 // rotate right
                 case iROR:
-                    logger.info( "iROR: opcData = " + opcData );
+                    logger.fine( "iROR: opcData = " + opcData );
                     TMPD.fill( OpAddr2, DS, M2, R2 );
-                    logger.info( "TMPD = " + intHex(TMPD.get()) );
+                    logger.fine( "TMPD = " + intHex(TMPD.get()) );
                     opcData = (byte)( opcData % (8*DS.sizeValue()) );
-                    logger.info( "iROR: opcData = " + opcData );
+                    logger.fine( "iROR: opcData = " + opcData );
                     TMPR.set( TMPD.get() >>> opcData );
                     logger.info( "TMPR = " + intHex(TMPR.get()) );
                     TMPR.set( setBits( TMPR.get(), (byte)(8*DS.sizeValue()-opcData),
@@ -1094,7 +1120,7 @@ class Sim68k {
                         case ADDRESS_REGISTER_DIRECT -> System.out.print( "[ A" + (int)R1 + " ]  = " );
                         case ADDRESS_REGISTER_INDIRECT -> System.out.print( "[" + intHex(AR[R1]) + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT_POSTINC -> // numBytes(DS) subtracted to compensate post-incrementation
-                                System.out.print( "[" + intHex(AR[R1] - DS.sizeValue()) + " ] = " );
+                                System.out.print( "[" + intHex( AR[R1] - DS.sizeValue() ) + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT_PREDEC -> System.out.print( "[" + intHex(AR[R1]) + "] = ");
                         case RELATIVE_ABSOLUTE -> System.out.print( "[" + intHex(OpAddr1) + "] = " );
                         default -> {
@@ -1127,8 +1153,8 @@ class Sim68k {
                     H = true; // Set the Halt bit to true (stops program)
                     break;
                 default:
-                    logger.logError("\n>>> ExecInstr() received invalid instruction '" + Mnemo[OpId]
-                                    + "' at PC = " + (PC-2));
+                    logger.logError( "\n>>> ExecInstr() received invalid instruction '" + Mnemo[OpId]
+                                     + "' at PC = " + (PC-2) );
                     H = true ;
             }
         }
@@ -1156,8 +1182,6 @@ class Sim68k {
             boolean inComment = false ;
             short address = 0 ;
             String input ;
-            long decVal ;
-            String nxtline ;
             String inputFolder = "/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/in/" ;
             String filename = inputFolder + fname ;
             try
@@ -1168,7 +1192,7 @@ class Sim68k {
 
                 // get lines from the file
                 while( fileScanner.hasNextLine() ) {
-                    nxtline = fileScanner.nextLine();
+                    String nxtline = fileScanner.nextLine();
                     Scanner wordScanner = new Scanner( nxtline );
                     // get words from the line
                     while ( wordScanner.hasNext() ) {
@@ -1180,16 +1204,16 @@ class Sim68k {
                             inComment = ! inComment ;
                             continue ;
                         }
-
                         // skip comment
                         if( inComment )
                             continue ;
 
                         // process hex input
                         if( input.charAt(0) == HEX_MARKER ) {
-                            String hx = input.substring( 1, 3 ).toUpperCase( Locale.ROOT );
-                            decVal = Integer.parseInt( hx, 16 );
-                            logger.info("Read value '" + HEX_MARKER + hx + "(" + decVal + ")' into memory at location: " + address);
+                            String hx = input.substring(1, 3).toUpperCase( Locale.ROOT );
+                            long decVal = Integer.parseInt( hx, 16 );
+                            logger.info( "Read value '" + HEX_MARKER + hx + "(" + decVal + ")' into memory at location: "
+                                         + address );
                             mem.load( address, (byte)decVal );
                             address++ ;
                         }
@@ -1203,7 +1227,6 @@ class Sim68k {
             }
 
             System.out.println("Program loaded. " + address + " bytes in memory.");
-            H = false ;
             return true ;
         }
 
@@ -1248,6 +1271,7 @@ class Sim68k {
         void start() {
             logger.info( "\n\t>>> START PROGRAM >>>" );
             PC = 0;
+            H = false;
             do // Repeat the Fetch-Execute Cycle until the Halt bit becomes true
             {
                 ctrl.fetchOpCode();
