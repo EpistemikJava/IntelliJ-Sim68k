@@ -216,27 +216,6 @@ class Sim68k {
         return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
     }
 
-    /** Get most or least significant word from an int <br>
-     MSW: false = Least Significant Word, true = Most Significant Word */
-    int getWord(final int nV, boolean MSW) {
-        logger.info( "nV = " + nV + " | " + intHex(nV) );
-        if( MSW )
-            return( nV >>> 16 );
-        int nvl = nV << 16 ;
-        logger.finer( "nvl = " + nvl + " | " + intHex(nvl) );
-        int nvr = nvl >>> 16 ;
-        logger.finer( "nvr = " + nvr + " | " + intHex(nvr) );
-        return nvr ;
-    }
-
-    /** Get most or least significant word from an int <br>
-        MSW: false = Least Significant Word, true = Most Significant Word */
-    short getShort(final int nV, boolean MSW) {
-        if( MSW )
-            return (short)( (nV & 0xFFFF0000) >> 16 );
-        return (short)( nV & 0x0000FFFF );
-    }
-
     /** In an int set the bit indicated by posn to val (false or true) */
     int setBit(int nV, final short posn, final boolean val) {
         byte bt = (val) ? (byte)1 : (byte)0 ;
@@ -261,6 +240,34 @@ class Sim68k {
             case byte3 -> { return (nV & 0x00FFFFFF) | (val << 24); }
         }
         return 0; // should NEVER reach here
+    }
+
+    /*
+    *  The word, i.e. short (16 bit) utility functions are problematic
+    *  as Java silently promotes any short used in a bit shift operation
+    *  to an int, WITH sign extension!!
+    *  >> this DOES NOT WORK in some cases to give the required result
+    */
+
+    /** Get most or least significant word from an int <br>
+     MSW: false = Least Significant Word, true = Most Significant Word */
+    int getWord(final int nV, boolean MSW) {
+        logger.info( "nV = " + nV + " | " + intHex(nV) );
+        if( MSW )
+            return( nV >>> 16 );
+        int nvl = nV << 16 ;
+        logger.finer( "nvl = " + nvl + " | " + intHex(nvl) );
+        int nvr = nvl >>> 16 ;
+        logger.finer( "nvr = " + nvr + " | " + intHex(nvr) );
+        return nvr ;
+    }
+
+    /** Get most or least significant word from an int <br>
+     MSW: false = Least Significant Word, true = Most Significant Word */
+    short getShort(final int nV, boolean MSW) {
+        if( MSW )
+            return (short)( (nV & 0xFFFF0000) >> 16 );
+        return (short)( nV & 0x0000FFFF );
     }
 
     /** In an int set one word indicated by MSW to val <br>
@@ -355,9 +362,9 @@ class Sim68k {
                         set( setByte(get(), TwoBits.byte1, (byte)0) );
                     if( dsz.sizeValue() <= DataSize.wordSize.sizeValue() ) {
                         int sw1 = setWord( get(), MOST, 0 );
-                        logger.info( "setWord1 = " + intHexBin(sw1) );
                         int ss1 = setShort( get(), MOST, (short)0 );
-                        logger.info( "setShort1 = " + intHexBin(ss1) );
+                        if( ss1 != sw1 )
+                            logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
                         set( sw1 );
                     }
                 }
@@ -418,13 +425,12 @@ class Sim68k {
                             logger.info( "LSW of temp value = " + lsw + " | " + intHex(lsw) );
 
                             int sw1 = setWord( dr, LEAST, lsw );
-                            logger.info( "setWord1 = " + intHexBin(sw1) );
                             int ss1 = setShort( dr, LEAST, (short)lsw );
-                            logger.info( "setShort1 = " + intHexBin(ss1) );
-                            int newDR = sw1 ;
-                            logger.info( "new DR = " + newDR + " | " + intHex(newDR) );
+                            if( ss1 != sw1 )
+                                logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
+                            logger.info( "new DR = " + sw1 + " | " + intHex(sw1) );
 //                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
-                            DR[RegNo] = newDR;
+                            DR[RegNo] = sw1;
                         }
                         case longSize -> DR[RegNo] = get();
                         default -> {
@@ -677,16 +683,36 @@ class Sim68k {
             int trVal = tr.get();
             switch (DS) {
                 case byteSize -> {
-                    Z = getBits( getShort(trVal, LEAST), 0, 7 ) == 0;
-                    N = getBits( getShort(trVal, LEAST), 7, 7 ) == 1;
+                    short bzs = getBits( getShort(trVal, LEAST), 0, 7 );
+                    short bzw = getBits( (short)getWord(trVal, LEAST), 0, 7 );
+                    if( bzw != bzs )
+                        logger.info( "bzs = " + intHexBin(bzs) + "; bzw = " + intHexBin(bzw) );
+                    Z = (bzs == 0);
+                    short bns = getBits( getShort(trVal, LEAST), 7, 7 );
+                    short bnw = getBits( (short)getWord(trVal, LEAST), 7, 7 );
+                    if( bnw != bns )
+                        logger.info( "bns = " + intHexBin(bns) + "; bnw = " + intHexBin(bnw) );
+                    N = (bns == 1);
                 }
                 case wordSize -> {
-                    Z = getBits( getShort(trVal, LEAST), 0, 15 )  == 0 ;
-                    N = getBits( getShort(trVal, LEAST), 15, 15 ) == 1 ;
+                    short wzs = getBits( getShort(trVal, LEAST), 0, 15 );
+                    short wzw = getBits( (short)getWord(trVal, LEAST), 0, 15 );
+                    if( wzw != wzs )
+                        logger.info( "wzs = " + intHexBin(wzs) + "; wzw = " + intHexBin(wzw) );
+                    Z = (wzs == 0);
+                    short wns = getBits( getShort(trVal, LEAST), 15, 15 );
+                    short wnw = getBits( (short)getWord(trVal, LEAST), 15, 15 );
+                    if( wnw != wns )
+                        logger.info( "wns = " + intHexBin(wns) + "; wnw = " + intHexBin(wnw) );
+                    N = (wns == 1);
                 }
                 case longSize -> {
-                    Z = trVal == 0 ;
-                    N = getBits( getShort(trVal, MOST), 15, 15 ) == 1 ;
+                    Z = (trVal == 0);
+                    short lns = getBits( getShort(trVal, MOST), 15, 15 );
+                    short lnw = getBits( (short)getWord(trVal, MOST), 15, 15 );
+                    if( lns != lnw )
+                        logger.info( "lns = " + intHexBin(lns) + "; lnw = " + intHexBin(lnw) );
+                    N = (lns == 1);
                 }
                 default -> {
                     logger.logError( "INVALID data size '" + DS + "' at PC = " + (PC-2) );
@@ -817,30 +843,45 @@ class Sim68k {
                             logger.info("TMPS = " + TMPS.hex() + "; TMPD = " + TMPD.hex());
                             if( ((TMPD.get() / TMPS.get()) == 0)  &&  flag ) {
                                 int sw1 = setWord( TMPR.get(), LEAST, 0 );
-                                logger.info( "setWord1 = " + intHexBin(sw1) );
                                 int ss1 = setShort( TMPR.get(), LEAST, (short)0 );
-                                logger.info( "setShort1 = " + intHexBin(ss1) );
-                                TMPR.set( sw1 );
-                                logger.info("TMPR = " + TMPR.hex() );
+                                if( ss1 != sw1 )
+                                    logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
+//                                TMPR.set( sw1 );
+//                                logger.info("TMPR = " + TMPR.hex() );
 
                                 TMPD.set( ~(TMPD.get()) + 1 );
                                 logger.info("TMPD = " + TMPD.hex() );
-                                int sw2 = setWord( TMPR.get(), MOST, (TMPD.get() % TMPS.get()) );
-                                logger.info( "setWord2 = " + intHexBin(sw2) );
-                                int ss2 = setShort(TMPR.get(), MOST, (short)(TMPD.get() % TMPS.get()));
-                                logger.info( "setShort2 = " + intHexBin(ss2) );
-                                TMPR.set( sw2 );
+                                int sw2 = setWord( ss1, MOST, (TMPD.get() % TMPS.get()) );
+                                int ss2 = setShort( ss1, MOST, (short)(TMPD.get() % TMPS.get()) );
+                                if( ss2 != sw2 )
+                                    logger.info( "setWord2 = " + intHexBin(sw2) + "; setShort2 = " + intHexBin(ss2) );
+                                TMPR.set( ss2 );
                             }
                             else {
-                                TMPR.set( TMPD.get() / getShort(TMPS.get(), LEAST) );
-                                logger.info("now TMPR = " + TMPR.hex() );
-                                int sw3 = setWord( TMPR.get(), MOST, (TMPD.get() % getShort(TMPS.get(), LEAST)) );
-                                logger.info( "setWord3 = " + intHexBin(sw3) );
-                                int ss3 = setShort( TMPR.get(), MOST, (short)(TMPD.get() % getShort(TMPS.get(), LEAST)) );
-                                logger.info( "setShort3 = " + intHexBin(ss3) );
-                                int ssd = (TMPR.get() & 0x0000FFFF) | ((short)(TMPD.get() % getShort(TMPS.get(),LEAST)) << 16);
+                                short tmps_least = getShort( TMPS.get(), LEAST );
+                                int wtmps_least = getWord( TMPS.get(), LEAST );
+                                if( tmps_least != wtmps_least )
+                                    logger.info( "tmps_least = " + intHexBin(tmps_least)
+                                                 + "; wtmps_least = " + intHexBin(wtmps_least) );
+                                int tmpd_div_l = TMPD.get() / tmps_least ;
+//                                int wtmpd_div_l = TMPD.get() / wtmps_least ;
+//                                if( tmpd_div_l != wtmpd_div_l )
+//                                    logger.info( "tmpd_div_l = " + intHexBin(tmpd_div_l)
+//                                            + "; wtmpd_div_l = " + intHexBin(wtmpd_div_l) );
+//                                TMPR.set( TMPD.get() / tmps_least );
+//                                logger.info("now TMPR = " + TMPR.hex() );
+                                int tmpd_mod_l = TMPD.get() % tmps_least ;
+//                                int wtmpd_mod_l = TMPD.get() % wtmps_least ;
+//                                if( tmpd_mod_l != wtmpd_mod_l )
+//                                    logger.info( "tmpd_mod_l = " + intHexBin(tmpd_mod_l)
+//                                            + "; wtmpd_mod_l = " + intHexBin(wtmpd_mod_l) );
+                                int sw3 = setWord( tmpd_div_l, MOST, tmpd_mod_l );
+                                int ss3 = setShort( tmpd_div_l, MOST, (short)tmpd_mod_l );
+                                if( ss3 != sw3 )
+                                    logger.info( "setWord3 = " + intHexBin(sw3) + "; setShort3 = " + intHexBin(ss3) );
+                                int ssd = (tmpd_div_l & 0x0000FFFF) | ((short)(tmpd_mod_l) << 16);
                                 logger.info( "ssd = " + intHexBin(ssd) );
-                                TMPR.set( ssd );
+                                TMPR.set( ss3 );
                             }
                             logger.info("TMPR(" + TMPR.hex() + ") = TMPD(" + TMPD.hex() + ") / TMPS(" + TMPS.hex() + ")");
                             setZN( TMPR );
