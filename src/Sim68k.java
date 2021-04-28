@@ -201,7 +201,7 @@ class Sim68k {
      are designed to help you manipulate (extract and set) the bits.
      You may use or modify these procedures/functions or create others.
 
-     *************************************************************************** */
+     ***************************************************************************** */
 
     /**
      *  Return a subString of bits between FirstBit and LastBit from a word <br>
@@ -212,7 +212,7 @@ class Sim68k {
           The bits from 3 to 9 are:  10 0011 0 <br>
           So the function returns 0x0046 (0000 0000 0100 0110)
      */
-    short getBits( final short wV, final int FirstBit, final int LastBit) {
+    short getBits( final int wV, final int FirstBit, final int LastBit) {
         return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
     }
 
@@ -242,12 +242,14 @@ class Sim68k {
         return 0; // should NEVER reach here
     }
 
-    /*
-    *  The word, i.e. short (16 bit) utility functions are problematic
-    *  as Java silently promotes any short used in a bit shift operation
-    *  to an int, WITH sign extension!!
-    *  >> this DOES NOT WORK in some cases to give the required result
-    */
+    /* ***************************************************************************
+
+      The word, i.e. short (16 bit) utility functions are problematic
+      as Java silently promotes any short used in a bit shift operation
+      to an int, WITH sign extension!!
+      >> this DOES NOT WORK in some cases to give the required result
+
+     ***************************************************************************** */
 
     /** Get most or least significant word from an int <br>
      MSW: false = Least Significant Word, true = Most Significant Word */
@@ -299,9 +301,15 @@ class Sim68k {
         return (nV & 0xFFFF0000) | val ;
     }
 
+    /* ***************************************************************************
+
+       Functions to display values as hex and/or binary numbers
+
+     ***************************************************************************** */
+
     /** utility function for easy display of a byte value as an unsigned hex String */
     static String byteInHex(byte value) {
-        return( HEX_MARKER + Integer.toHexString(Byte.toUnsignedInt(value)).toUpperCase(Locale.ROOT) );
+        return intHex( Byte.toUnsignedInt(value) );
     }
 
     /** utility function for easy display of an int value as UNSIGNED hex String */
@@ -311,8 +319,7 @@ class Sim68k {
 
     /** utility function for easy display of an int value as UNSIGNED hex AND bit String */
     static String intHexBin(int value) {
-        return( value + " | " + HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT)
-                + " | " + Integer.toBinaryString(value) );
+        return( value + " | " + intHex(value) + " | " + Integer.toBinaryString(value) );
     }
 
     /*
@@ -329,7 +336,7 @@ class Sim68k {
         void set(int val) { value = val; }
         int get() { return value; }
         /** display value as a hex String */
-        String hex() { return( HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) ); }
+        String hex() { return( value + " | " + HEX_MARKER + Integer.toHexString(value).toUpperCase(Locale.ROOT) ); }
 
         /** set value to the sum of the values in the parameters */
         void add(TempReg trA, TempReg trB) { set( trA.get() + trB.get() ); }
@@ -339,10 +346,12 @@ class Sim68k {
         void multiply(TempReg trA, TempReg trB) { set( trA.get() * trB.get() ); }
 
         /* ***************************************************************************
+
          Since many instructions will make local fetches between temporary registers
          (TMPS, TMPD, TMPR) & memory or the Dn & An registers it would be
          useful to create procedures to transfer the shorts/bytes between them.
          Here are 2 suggestions of procedures to do this.
+
          **************************************************************************** */
 
         /**
@@ -726,6 +735,7 @@ class Sim68k {
          *  The calculations for V (overflow) and C (carry) use these values
          */
         void setSmDmRm( TempReg trS, TempReg trD, TempReg trR ) {
+            logger.info( "DS = " + DS.strValue() );
             byte mostSigBit ; // wordSize
             switch( DS ) {
                 case byteSize -> mostSigBit =  7 ;
@@ -737,9 +747,12 @@ class Sim68k {
                     return ;
                 }
             }
-            Sm = getBits( (short)trS.get(), mostSigBit, mostSigBit ) == 1 ;
-            Dm = getBits( (short)trD.get(), mostSigBit, mostSigBit ) == 1 ;
-            Rm = getBits( (short)trR.get(), mostSigBit, mostSigBit ) == 1 ;
+            Sm = getBits( trS.get(), mostSigBit, mostSigBit ) == 1 ;
+            logger.info( "Sm = " + Sm );
+            Dm = getBits( trD.get(), mostSigBit, mostSigBit ) == 1 ;
+            logger.info( "Dm = " + Dm );
+            Rm = getBits( trR.get(), mostSigBit, mostSigBit ) == 1 ;
+            logger.info( "Rm = " + Rm );
         }
 
         /** The execution of each instruction is done via its micro-program */
@@ -764,7 +777,11 @@ class Sim68k {
                     // 4. Update status bits HZNVC if necessary
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
+                    boolean v1 = ( Sm & Dm & !Rm );
+                    boolean v2 = ( !Sm & !Dm & Rm );
+                    logger.info( "v1 = " + v1 + "; and v2 = " + v2 );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
+                    logger.info( "V = " + V );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
                     // 5. Store the result in the destination if necessary
                     TMPR.write( OpAddr2, DS, M2, R2 );
@@ -1329,7 +1346,7 @@ class Sim68k {
 
     /*
      *  MAIN
-     **************************************************************************/
+     ********************************************************************************************* */
     public static void main(final String[] args) {
         System.out.println( "PROGRAM STARTED ON " + Thread.currentThread() );
         String logLevel = args.length > 0 ? args[0] : LogControl.DEFAULT_CONSOLE_LEVEL.getName();
