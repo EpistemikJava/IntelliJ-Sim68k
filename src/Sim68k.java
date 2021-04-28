@@ -201,7 +201,7 @@ class Sim68k {
      are designed to help you manipulate (extract and set) the bits.
      You may use or modify these procedures/functions or create others.
 
-     ***************************************************************************** */
+    ****************************************************************************** */
 
     /**
      *  Return a subString of bits between FirstBit and LastBit from a word <br>
@@ -256,7 +256,7 @@ class Sim68k {
      *  MSW: false = Least Significant Word, true = Most Significant Word
      */
     int getWord(final int nV, boolean MSW) {
-        logger.info( "nV = " + nV + " | " + intHex(nV) );
+        logger.finer( "nV = " + nV + " | " + intHex(nV) );
         if( MSW )
             return( nV >>> 16 );
         int nvl = nV << 16 ;
@@ -268,29 +268,29 @@ class Sim68k {
 
     /**
      *  In an int set one word indicated by MSW to val <br>
-     *  MSW: false = Least Significant Word, true = Most Significant Word
-    */
+     *  MSW: false = Least Significant Word, true = Most Significant Word <br>
+     *  NEED this version for the fill() and write() methods of <class>TempReg</class>
+     */
     int setWord(int nV, final boolean MSW, final int val) {
-        logger.info( "nV = " + nV + " | " + intHex(nV) );
-        logger.info( "val = " + val + " | " + intHex(val) );
+        logger.finer( "nV = " + nV + " | " + intHex(nV) );
+        logger.finer( "val = " + val + " | " + intHex(val) );
         if( MSW ) {
             int nvmod = nV & 0x0000FFFF ;
-//            int nvmod = nV >>> 16 ;
-            logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
+            logger.finer( "nvmod = " + nvmod + " | " + intHex(nvmod) );
             short valmod = (short)(val << 16);
-            logger.info( "valmod = " + valmod + " | " + intHex(valmod) );
-//            return ( nV & 0x0000FFFF ) | ( val << 16 );
+            logger.finer( "valmod = " + valmod + " | " + intHex(valmod) );
             return( nvmod | valmod );
         }
         int nvmod = nV & 0xFFFF0000 ;
-//        int nvmod = (nV << 16) >>> 16 ;
-        logger.info( "nvmod = " + nvmod + " | " + intHex(nvmod) );
-//        return (nV & 0xFFFF0000) | val ;
+        logger.finer( "nvmod = " + nvmod + " | " + intHex(nvmod) );
         return( nvmod | val );
     }
 
-    /** In an int set one word indicated by MSW to val <br>
-     MSW: false = Least Significant Word, true = Most Significant Word */
+    /**
+     *  In an int set one word indicated by MSW to val <br>
+     *  MSW: false = Least Significant Word, true = Most Significant Word <br>
+     *  NEED this version for <em>signed division</em>
+     */
     int setShort(int nV, final boolean MSW, final short val) {
         if( MSW )
             return (nV & 0x0000FFFF) | (val << 16) ;
@@ -367,9 +367,9 @@ class Sim68k {
                         set( setByte(get(), TwoBits.byte1, (byte)0) );
                     if( dsz.sizeValue() <= DataSize.wordSize.sizeValue() ) {
                         int sw1 = setWord( get(), MOST, 0 );
-                        int ss1 = setShort( get(), MOST, (short)0 );
-                        if( ss1 != sw1 )
-                            logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
+//                        int ss1 = setShort( get(), MOST, (short)0 );
+//                        if( ss1 != sw1 )
+//                            logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
                         set( sw1 );
                     }
                 }
@@ -401,7 +401,7 @@ class Sim68k {
                     mem.access( dsz, READ );
                     set( MDR );
                 }
-                default -> { // This error should never occur, but just in case...!
+                default -> { // This should never occur, but just in case...!
                     logger.logError( "\n>>> INVALID Addressing Mode '" + mode + "' at PC = " + (PC-2) );
                     H = true;
                 }
@@ -424,16 +424,16 @@ class Sim68k {
                         case byteSize -> DR[RegNo] = setBits( DR[RegNo], (byte)0, (byte)7, (short)get() );
                         case wordSize -> {
                             int dr = DR[RegNo];
-                            logger.info( "DR[" + RegNo + "] = " + dr + " | " + intHex(dr) );
-                            logger.info( "temp value = " + get() + " | " + intHex(get()) );
+                            logger.fine( "DR[" + RegNo + "] = " + dr + " | " + intHex(dr) );
+                            logger.fine( "temp value = " + get() + " | " + intHex(get()) );
                             int lsw = getWord(get(), LEAST);
-                            logger.info( "LSW of temp value = " + lsw + " | " + intHex(lsw) );
+                            logger.fine( "LSW of temp value = " + lsw + " | " + intHex(lsw) );
 
                             int sw1 = setWord( dr, LEAST, lsw );
-                            int ss1 = setShort( dr, LEAST, (short)lsw );
-                            if( ss1 != sw1 )
-                                logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
-                            logger.info( "new DR = " + sw1 + " | " + intHex(sw1) );
+//                            int ss1 = setShort( dr, LEAST, (short)lsw );
+//                            if( ss1 != sw1 )
+//                                logger.info( "setWord1 = " + intHexBin(sw1) + "; setShort1 = " + intHexBin(ss1) );
+                            logger.fine( "new DR = " + sw1 + " | " + intHex(sw1) );
 //                            DR[RegNo] = setWord( DR[RegNo], LEAST, getWord(get(), LEAST) );
                             DR[RegNo] = sw1;
                         }
