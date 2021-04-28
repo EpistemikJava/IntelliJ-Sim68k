@@ -1,0 +1,75 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=37251:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+Apr. 27, 2021 1:53:00 P.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+	java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): arith
+
+Program loaded. 176 bytes in memory.
+Status Bits: H:false N:true Z:false V:true C:false
+[$6] = $9978 (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[$6] = $DCAC (word)
+Status Bits: H:false N:false Z:true V:false C:true
+[ D0 ]  = $0 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ]  = $100 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[$C] = $FFFF5E9A (long)
+Enter a value (long) for the register D1: 0
+[$C] = $FFFFCDEF (long)
+[ D0 ]  = $F6 (long)
+[ D0 ]  = $F6 (long)
+[$6] = $9978 (word)
+[$6] = $5678 (word)
+Status Bits: H:false N:false Z:false V:true C:false
+Enter a value (long) for the register D1: 0
+[ D0 ]  = $FFFFFFFD (long)
+[ D0 ]  = $FFFF0003 (long)
+[ D0 ]  = $FFFF00FD (long)
+[ D0 ]  = $FFFF0003 (long)
+Status Bits: H:false N:false Z:false V:false C:true
+Enter a value (long) for the register D1: 0
+Enter a value (word) for the register D0: $ff80
+Enter a value (word) for the register D1: $007f
+[ D0 ]  = $FFFFC080 (long)
+Enter a value (long) for the register D0: $ffffffff
+Enter a value (word) for the register D1: $fffe
+[ D0 ]  = $FFFF0000 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+Enter a value (word) for the register D0: -5
+Enter a value (word) for the register D1: -5
+[ D0 ]  = $19 (long)
+Enter a value (long) for the register D0: $ffff0000
+Enter a value (word) for the register D1: $7e
+[ D0 ]  = $FFF0FDF8 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+Enter a value (word) for the register D0: 10
+Enter a value (word) for the register D1: -10
+[ D0 ]  = $FFFFFF9C (long)
+Enter a value (long) for the register D0: 10
+Enter a value (word) for the register D1: -10
+[ D0 ]  = $FFFF (long)
+Status Bits: H:false N:false Z:false V:false C:false
+Enter a value (word) for the register D0: $ffff
+Enter a value (word) for the register D1: $ffff
+[ D0 ]  = $1 (long)
+Enter a value (long) for the register D0: $0007ffff
+Enter a value (word) for the register D1: $2
+[ D0 ]  = $1FFFF (long)
+Status Bits: H:false N:false Z:false V:true C:false
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0

@@ -1,0 +1,76 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=43721:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+Apr. 26, 2021 11:40:31 A.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+	java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): modes
+
+Program loaded. 300 bytes in memory.
+[ D0 ]  = $0 (byte)
+[ D0 ]  = $0 (word)
+[ D0 ]  = $0 (long)
+[ D0 ]  = $12345678 (long)
+[ D0 ]  = $1234FFFF (long)
+[ D0 ]  = $1234FF00 (long)
+[ D0 ]  = $1234FF98 (long)
+[ D1 ]  = $FEDCBA00 (long)
+[ D0 ]  = $1234BA00 (long)
+[ D1 ]  = $FEDCFF98 (long)
+[ D0 ]  = $FEDCFF98 (long)
+[ D1 ]  = $1234BA00 (long)
+Enter a value (byte) for the register D0: 0
+[$7] = $12345678 (long)
+[$7] = $0 (byte)
+[$7] = $34 (word)
+[$7] = $5678 (long)
+[$9] = $BA (byte)
+[$A] = $98 (byte)
+[$7] = $FEDCBA98 (long)
+[$7] = $FEFEDC98 (long)
+[$A] = $FEFEDCBA (long)
+Enter a value (byte) for the register D0: 0
+[ A0 ]  = $F (byte)
+[ A0 ]  = $F (word)
+[ A0 ]  = $7 (word)
+[ A1 ]  = $B (word)
+[ A1 ]  = $4 (word)
+Enter a value (byte) for the register D0: 0
+[$4 ] = $FF (byte)
+[$4 ] = $FFFF (word)
+[$4 ] = $FFFF00FE (long)
+[$11 ] = $0 (byte)
+[$11 ] = $7 (word)
+[$11 ] = $70001 (long)
+Enter a value (byte) for the register D0: 0
+[$13 ] = $0 (byte)
+[$14 ] = $1 (byte)
+[$15 ] = $2 (byte)
+[$16 ] = $3 (byte)
+[$17 ] = $4 (byte)
+[$17] = $4 (byte)
+[$16] = $3 (byte)
+[$15] = $2 (byte)
+[$14] = $1 (byte)
+[$13] = $0 (byte)
+[$1C ] = $0 (word)
+[$1E ] = $1 (word)
+[$20 ] = $2 (word)
+[$32] = $77778888 (long)
+[$2E] = $55556666 (long)
+[$2A] = $33334444 (long)
+[$26] = $11112222 (long)
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0

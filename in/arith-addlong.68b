@@ -1,0 +1,32 @@
+/ ; ******************************************************* /
+/ ; *** Arith.68                                        *** /
+/ ; *** Tests the arithmetic instructions of Sim68k     *** /
+/ ; *** Tests ADD, ADDQ, SUB, SUBQ, MULS, DIVS, NEG     *** /
+/ ; *** Uses  MOVE, MOVEQ, BRA, BVS, INP, DSR, DSP, HLT *** /
+/ ; ******************************************************* /
+/  /
+/ ;   Assembly Language       OpCode   Oper1   Oper2  /
+/ ;                           MSB LSB MSB LSB MSB LSB /
+/ ;-------------------------------------------------- /
+/ mem 0 - 19 /
+/ ; Branch to the first instruction /
+/ BRA.W @Main             ; / $92 $60 $00 $14
+/  /
+/ ; Declarations /
+/ DEF.W @Var1, #$4334     ; / $43 $34
+/ DEF.W @Var2, #$5678     ; / $56 $78
+/ DEF.L @Var3, #$FFFF90AB ; / $FF $FF $90 $AB
+/ DEF.L @Var4, #$FFFFCDEF ; / $FF $FF $CD $EF
+/ DEF.L @Var5, #$000000F6 ; / $00 $00 $00 $F6
+/ ; Main program /
+/ LABEL @Main             ; /
+/  /
+/ ; Tests ADD and ADDQ /
+/ ;----------------------- /
+/     ADD.L @Var3, @Var4  ; / $05 $66 $00 $08 $00 $0C
+/ ; *** Carry /
+/     DSR.B               ; / $F0 $00
+/     DSP.L @Var4         ; / $EC $60 $00 $0C
+/  /
+/ LABEL @End              ; /
+/     HLT.B               ; / $F8 $00

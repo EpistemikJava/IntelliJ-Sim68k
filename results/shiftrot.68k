@@ -1,0 +1,59 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=40163:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+Apr. 27, 2021 1:50:28 P.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+	java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): shiftrot
+
+Program loaded. 182 bytes in memory.
+[ D0 ]  = $F0F0F080 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[ D0 ]  = $F0F0F010 (long)
+[ D1 ]  = $F0F0F01 (long)
+[ D1 ]  = $F0F0F08 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ]  = $F0F08780 (long)
+[ D0 ]  = $F0F010F0 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D1 ]  = $F0F01E1 (long)
+Status Bits: H:false N:false Z:false V:false C:true
+[ D1 ]  = $F0F0F08 (long)
+[ D0 ]  = $87878780 (long)
+[ D0 ]  = $10F0F0F0 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D1 ]  = $1E1E1E1 (long)
+Status Bits: H:false N:false Z:false V:false C:true
+[ D1 ]  = $F0F0F08 (long)
+[ D0 ]  = $F0F0F087 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[ D0 ]  = $F0F0F0F0 (long)
+[ D1 ]  = $F0F0FE1 (long)
+[ D1 ]  = $F0F0F0F (long)
+Status Bits: H:false N:false Z:false V:false C:true
+[ D0 ]  = $F0F08787 (long)
+[ D0 ]  = $F0F0F0F0 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[ D1 ]  = $F0FE1E1 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[ D1 ]  = $F0F0F0F (long)
+[ D0 ]  = $87878787 (long)
+[ D0 ]  = $F0F0F0F0 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[ D1 ]  = $E1E1E1E1 (long)
+[ D1 ]  = $F0F0F0F (long)
+Status Bits: H:false N:false Z:false V:false C:true
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0

@@ -1,0 +1,47 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=39857:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+Apr. 26, 2021 11:03:10 A.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+	java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): logic
+
+Program loaded. 162 bytes in memory.
+[ D0 ]  = $12CB (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $EDCB (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $FEDCBA98 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $1204 (word)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ]  = $204 (word)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ]  = $1234567 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ]  = $12FD (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $BBFD (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $89ABCDEF (long)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $12F9 (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $B9F9 (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ]  = $88888888 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0

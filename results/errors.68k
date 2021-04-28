@@ -1,0 +1,83 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=39401:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+Apr. 26, 2021 12:23:27 P.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+	java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 1
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), MhsLogger.logError(LogControl.java:366), Sim68k$Controller.fetchOperands(Sim68k.java:659), Sim68k$Processor.start(Sim68k.java:1255), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #2
+MhsLogger logError
+LINE #659
+ERROR: INVALID number of operands for ADDQ at PC = 68
+
+e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 2
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), Sim68k$Controller.checkCond(Sim68k.java:588), Sim68k$Controller.execInstr(Sim68k.java:968), Sim68k$Processor.start(Sim68k.java:1257), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #3
+Sim68k$Controller checkCond
+LINE #968
+ERROR: 'Invalid Data Size' at PC = 76 for operation BRA
+
+e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 3
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), Sim68k$Controller.checkCond(Sim68k.java:588), Sim68k$Controller.execInstr(Sim68k.java:967), Sim68k$Processor.start(Sim68k.java:1257), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #4
+Sim68k$Controller checkCond
+LINE #967
+ERROR: 'Invalid Addressing Mode' at PC = 82 for operation BRA
+
+e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 4
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), Sim68k$Controller.checkCond(Sim68k.java:588), Sim68k$Controller.execInstr(Sim68k.java:1031), Sim68k$Processor.start(Sim68k.java:1257), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #5
+Sim68k$Controller checkCond
+LINE #1031
+ERROR: 'Invalid Addressing Mode' at PC = 90 for operation MOVEA
+
+e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 5
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), Sim68k$Controller.checkCond(Sim68k.java:588), Sim68k$Controller.execInstr(Sim68k.java:1031), Sim68k$Processor.start(Sim68k.java:1257), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #6
+Sim68k$Controller checkCond
+LINE #1031
+ERROR: 'Invalid Addressing Mode' at PC = 96 for operation MOVEA
+
+e
+Name of the 68k binary program ('.68b' will be added automatically): errors
+
+Program loaded. 112 bytes in memory.
+Enter a value (byte) for the register D0: 6
+Your Option ('e' to execute a program, 'q' to quit): [java.base/java.lang.Thread.getStackTrace(Thread.java:1598), MhsLogger.logError(LogControl.java:352), Sim68k$Controller.checkCond(Sim68k.java:588), Sim68k$Controller.execInstr(Sim68k.java:797), Sim68k$Processor.start(Sim68k.java:1257), Sim68k.startup(Sim68k.java:1301), Sim68k.main(Sim68k.java:1271)]
+WARNING: Sim68k record #7
+Sim68k$Controller checkCond
+LINE #797
+ERROR: 'Division by Zero' at PC = 104 for operation DIVS
+
+q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0
