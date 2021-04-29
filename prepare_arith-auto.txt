@@ -1,0 +1,92 @@
+
+Addressing modes (M1 and M2) are encoded on 3 bits:
+
+   * 000 :  Data register direct
+   * 011 :  Relative/Absolute addressing
+
+================================================================
+
+   * O (5 bits)	:  OpCode name (OpName)
+
+   * S (2 bits)	:  Size, 00 ==> Byte, 01 ==> Word, 10 ==> Long
+
+   * P (1 bit)	:  Number of operands minus 1
+		(i.e., P = 0 ==> one operand ;  P = 1 ==> two operands)
+		As a special case if the number of operands is zero, then P = 0.
+   
+   * M1 (3 bits) :  Addressing mode of operand-1 (if any)
+   * N1 (1 bit)	 :  Register number of operand-1 (if any)
+			        (Not considered when M1 = 011)
+
+   * M2 (3 bits) : Addressing mode of operand-2 (if any)
+   * N2 (1 bit)  : Register number of operand-2 (if any)
+			       (Not considered when M2 = 011)
+
+   * Data (4 bits)	:  4-bit integer constant (i.e., $0..$F)
+
+
+            |   OpCodeInfo       |  Opref-1  |  Opref-2  |
+            +----------+-----+---+------+----+------+----+
+       F1:  |    O     |  S  | P |  M1  | N1 |  M2  | N2 |
+            +----------+-----+---+------+----+------+----+
+
+
+            |   OpCodeInfo       |  Opref-1  |  Opref-2  |
+            +----------+-----+---+-----------+------+----+
+       F2:  |    O     |  S  | P |   Data    |  M2  | N2 |
+            +----------+-----+---+-----------+------+----+
+
+================================================================
+
+   * MULS S, D	Binary integer multiplication (Signed). D.L := D.W * S.W
+
+   * DIVS S, D	Binary integer division (Signed). LSW(D) := D.L DIV S.W
+                                   				  MSW(D) := D.L MOD S.W
+
+   * NEG D	Binary integer negation (Regular). D := 2's complement of D
+
+   * CLR D	Clear (set to 0). D := 0
+
+
+Mnemo  Fmt  OpName    S    P  HNZVC   Comments
+-----  ---  ------  -----  -  -----  -----------------------
+ CLR    F1   00111  B,W,L  0  -**00
+
+ MULS   F1   00100    W    1  -**00  
+
+ DIVS   F1   00101    L    1  -**?0   V = division overflow 
+
+ NEG    F1   00110  B,W,L  0  -**??   V = Dm.Rm ,  C = Dm + Rm
+
+ MOVEQ  F2   11001  B,W,L  0  -**00
+
+================================================================
+
+CLR.L D1 = 00111 10 0 000 1 000 1/0
+         = 0011 1100 0001 0001
+         = $3C $11
+
+MULS.W @Var6, @Var7   = 00100 01 1 0110 0110 @Var6, @Var7 
+                      = 0010 0011 0110 0110
+                      = $23 $66 $00 $14 $00 $16
+
+DIVS.L @Var9, @Var8   = 00101 10 1 0110 0110 @Var9, @Var8
+                      = 0010 1101 0110 0110
+                      = $2D $66 $00 $1C $00 $18
+
+MULS.W @Var10, @Var10 = 00100 01 1 0110 0110 @Var10, @Var10
+                      = 0010 0011 0110 0110
+                      = $23 $66 $00 $1E $00 $1E
+
+DIVS.L @Var12, @Var11 = 00101 10 1 0110 0110 @Var12, @Var11
+                      = 0010 1101 0110 0110
+                      = $2D $66 $00 $26 $00 $22
+
+
+MULS.W @Var8, @Var8   = 00100 01 1 0110 0110 @Var8, @Var8
+                      = 0010 0011 0110 0110
+                      = $23 $66 $00 $18 $00 $18
+
+DIVS.L @Var14, @Var13 = 00101 10 1 0110 0110 @Var14, @Var13
+                      = 0010 1101 0110 0110
+                      = $2D $66 $00 $2C $00 $28

@@ -1,0 +1,151 @@
+/   ******************************************************* /
+/   *** arith-auto.68b                                  *** /
+/   *** Tests the arithmetic instructions of Sim68k     *** /
+/   *** Tests ADD, ADDQ, SUB, SUBQ, MULS, DIVS, NEG     *** /
+/   *** Uses  MOVE, MOVEQ, BRA, BVS, INP, DSR, DSP, HLT *** /
+/   ******************************************************* /
+/  /
+/     Assembly Language       OpCode   Oper1   Oper2  /
+/                             MSB LSB MSB LSB MSB LSB /
+/  -------------------------------------------------- /
+/  /
+/   version of arith.68b replacing all INP steps with script data /
+/ mem 0 - 3 /
+/   Branch to the first instruction /
+/ BRA.W @Main               / $92 $60 $00 $14
+/ mem 4 - 19 /
+/   Declarations /
+/ DEF.W @Var1,  #$4334       / $43 $34
+/ DEF.W @Var2,  #$5678       / $56 $78
+/ DEF.L @Var3,  #$FFFF90AB   / $FF $FF $90 $AB
+/ DEF.L @Var4,  #$FFFFCDEF   / $FF $FF $CD $EF
+/ DEF.L @Var5,  #$000000F6   / $00 $00 $00 $F6
+/ mem 20 - 33 /
+/ DEF.W @Var6,  #$FF80       / $FF $80
+/ DEF.W @Var7,  #$007F       / $00 $7F
+/ DEF.L @Var8,  #$FFFFFFFF   / $FF $FF $FF $FF
+/ DEF.W @Var9,  #$FFFE       / $FF $FE
+/ Var10 a long just so enough space to write the answer /
+/ DEF.L @Var10, #-5          / $FF $FB $00 $00
+/ mem 34 - 45 /
+/ DEF.L @Var11, #$FFFF0000   / $FF $FF $00 $00
+/ DEF.W @Var12, #$007E       / $00 $7E
+/ DEF.L @Var13, #$0007FFFF   / $00 $07 $FF $FF
+/ DEF.W @Var14, #$0002       / $00 $02
+/   Main program /
+/ LABEL @Main               /
+/  /
+/   Tests ADD and ADDQ /
+/  ----------------------- /
+/ mem 46 - 57 /
+/     ADD.B @Var1, @Var2    / $01 $66 $00 $04 $00 $06
+/   *** Overflow, V = True /
+/     DSR.B                 / $F0 $00
+/     DSP.W @Var2           / $EA $60 $00 $06
+/ mem 58 - 69 /
+/     ADD.W @Var1, @Var2    / $03 $66 $00 $04 $00 $06
+/   *** No Overflow, V = False /
+/     DSR.B                 / $F0 $00
+/     DSP.W @Var2           / $EA $60 $00 $06
+/ mem 70 - 79 /
+/     MOVE.L @Var5, D0      / $C5 $60 $00 $10
+/     ADDQ.B #$A, D0        / $08 $A0
+/   *** Carry, C = True /
+/     DSR.B                 / $F0 $00
+/     DSP.L D0              / $EC $00
+/ mem 81 - 89 /
+/     MOVE.L @Var5, D0      / $C5 $60 $00 $10
+/     ADDQ.W #$A, D0        / $0A $A0
+/   *** No Carry, C = False /
+/     DSR.B                 / $F0 $00
+/     DSP.L D0              / $EC $00
+/ mem 90 - 101 /
+/     ADD.L @Var3, @Var4    / $05 $66 $00 $08 $00 $0C
+/   *** Carry /
+/     DSR.B                 / $F0 $00
+/     DSP.L @Var4           / $EC $60 $00 $0C
+/ mem 102 - 103 /
+/   set D1 to 0 /
+/     CLR.L D1              / $3C $11
+/ mem 104 - 151 /
+/   Tests SUB and SUBQ /
+/  ----------------------- /
+/     SUB.L @Var3, @Var4    / $15 $66 $00 $08 $00 $0C
+/     DSP.L @Var4           / $EC $60 $00 $0C
+/     SUBQ.L #$A, D0        / $1C $A0
+/     DSP.L D0              / $EC $00
+/     MOVE.L @Var5, D0      / $C5 $60 $00 $10
+/     ADDQ.B #$A, D0        / $08 $A0
+/     SUBQ.B #$A, D0        / $18 $A0
+/     DSP.L D0              / $EC $00
+/     SUB.W @Var1, @Var2    / $13 $66 $00 $04 $00 $06
+/     DSP.W @Var2           / $EA $60 $00 $06
+/     SUB.B @Var1, @Var2    / $11 $66 $00 $04 $00 $06
+/     DSP.W @Var2           / $EA $60 $00 $06
+/     DSR.B                 / $F0 $00
+/   set D1 to 0 /
+/     CLR.L D1              / $3C $11
+/ mem 152 - 173 /
+/   Tests NEG /
+/  ----------------------- /
+/     MOVEQ.L #$3, D0       / $CC $30
+/     NEG.L D0              / $34 $00
+/     DSP.L D0              / $EC $00
+/     NEG.W D0              / $32 $00
+/     DSP.L D0              / $EC $00
+/     NEG.B D0              / $30 $00
+/     DSP.L D0              / $EC $00
+/     NEG.B D0              / $30 $00
+/     DSP.L D0              / $EC $00
+/     DSR.B                 / $F0 $00
+/   set D1 to 0 /
+/     CLR.L D1              / $3C $11
+/ mem 174 - 193 /
+/   Test MULS and DIVS until V=true /
+/  ----------------------- /
+/ $FF80 * $007F /
+/     MULS.W @Var6, @Var7   / $23 $66 $00 $14 $00 $16
+/     DSP.L  @Var7          / $EC $60 $00 $16
+/ $FFFFFFFF div $FFFE /
+/     DIVS.L @Var9, @Var8   / $2D $66 $00 $28 $00 $24
+/     DSP.L  @Var8          / $EC $60 $00 $24
+/     DSR.B                 / $F0 $00
+/   If Overflow, STOP. /
+/     BVS.W @End            / $9A $60 $01 $00
+/ mem 194 - 213 /
+/ -5 * -5 /
+/     MULS.W @Var10, @Var10 / $23 $66 $00 $1E $00 $1E
+/     DSP.L  @Var10         / $EC $60 $00 $1E
+/ $FFFF0000 div $7E /
+/     DIVS.L @Var12, @Var11 / $2D $66 $00 $26 $00 $22
+/     DSP.L  @Var11         / $EC $60 $00 $22
+/     DSR.B                 / $F0 $00
+/   If Overflow, STOP. /
+/     BVS.W @End            / $9A $60 $01 $00
+/ mem 214 - 235 /
+/ 10 * -10 /
+/     MOVEQ.W #$A, D0       / $CC $30
+/     MOVEQ.W #$A, D1       / $CC $30
+/     NEG.L   D1            / $34 $00
+/     MULS.W  D1, D0        / $23 $10
+/     DSP.L   D0            / $EC $00
+/ -10 div 10 /
+/     MOVEQ.L #$A, D0       / $CC $30
+/     DIVS.L  D1, D0        / $2D $10
+/     DSP.L   D0            / $EC $00
+/     DSR.B                 / $F0 $00
+/   If Overflow, STOP. /
+/     BVS.W @End            / $9A $60 $01 $00
+/ mem 236 - 255 /
+/ $FFFF * $FFFF /
+/     MULS.W @Var8, @Var8   / $23 $66 $00 $18 $00 $18
+/     DSP.L  @Var8          / $EC $60 $00 $18
+/ $0007FFFF div $2 /
+/     DIVS.L @Var14, @Var13 / $2D $66 $00 $2C $00 $28
+/     DSP.L  @Var13         / $EC $60 $00 $28
+/     DSR.B                 / $F0 $00
+/   If Overflow, STOP. /
+/     BVS.W @End            / $9A $60 $01 $00
+/ mem 256 - 257 /
+/ LABEL @End                /
+/     HLT.B                 / $F8 $00
