@@ -310,7 +310,7 @@ class Sim68k {
 
     /** utility function for easy display of a byte value as an unsigned hex String */
     static String byteInHex(byte value) {
-        return intHex( Byte.toUnsignedInt(value) );
+        return value + " | " + intHex( Byte.toUnsignedInt(value) );
     }
 
     /** utility function for easy display of an int value as UNSIGNED hex String */
@@ -349,6 +349,26 @@ class Sim68k {
         void subtract(TempReg trA, TempReg trB) { value = trA.get() - trB.get() ; }
         /** set value to the product of the values in the parameters */
         void multiply(TempReg trA, TempReg trB) { value = trA.get() * trB.get() ; }
+
+
+        /**
+         *  Transfer the data from an OpCode with format F2 to this temporary register
+         *  @param  dsz  Data Size
+         *  @param data  byte from OpCode
+         */
+        void fillWithData( DataSize dsz, byte data ) {
+            logger.info( dsp() + "; dsz = " + dsz.strValue() + "; data = " + byteInHex(data) );
+            switch( dsz ) {
+                case ByteSize -> value = setByte( value, TwoBits.byte0, data );
+                case WordSize -> value = setWord( value, LEAST, data );
+                case LongSize -> {
+                    value = setWord( value, LEAST, data );
+                    value = setWord( value, MOST, 0 );
+                }
+                default -> logger.logError( "INVALID data size = " + dsz );
+            }
+            logger.info( dsp() );
+        }
 
         /* ***************************************************************************
 
@@ -621,36 +641,37 @@ class Sim68k {
 
         /** Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and opcData */
         void decodeInstr() {
-            logger.info( "OpCode = " + Integer.toBinaryString( opCode ) );
-            DS = getDataSize( getBits( opCode, 9, 10) );
-            opId = (byte)getBits( opCode, 11, 15 );
-            numOprd = (byte)( getBits( opCode, 8, 8) + 1 );
+            logger.info( "OpCode = " + Integer.toBinaryString(opCode) );
+            DS = getDataSize( getBits(opCode, 9, 10) );
+            opId = (byte)getBits(opCode, 11, 15 );
+            numOprd = (byte)( getBits(opCode, 8, 8) + 1 );
 
-            logger.config( "OpCode " + intHex( opCode ) + " at PC = " + (PC-2)
+            logger.config( "OpCode " + intHex(opCode) + " at PC = " + (PC-2)
                            + " :\n\tOpId = " + Mnemo[opId] + ", size = " + DS.strValue() + ", numOprnd = " + numOprd );
 
             if( numOprd > 0 ) { // SHOULD ALWAYS BE TRUE!
-                opdM2 = getAddressMode( getBits( opCode, 1, 3) );
+                opdM2 = getAddressMode( getBits(opCode, 1, 3) );
                 opdR2 = (byte)getBits( opCode, 0, 0 );
 
                 if( formatF1(opId) )
                     if( opId < iDSR ) {
-                        opdM1 = getAddressMode( getBits( opCode, 5, 7) );
+                        opdM1 = getAddressMode( getBits(opCode, 5, 7) );
                         opdR1 = (byte)getBits( opCode, 4, 4 );
                     }
                     else { // NEED to reset these for iDSR and iHLT !
                         opdM1 = opdM2 = AddressMode.DATA_REGISTER_DIRECT ;
                         opdR1 = opdR2 = 0 ;
                     }
-                else // Format F2
+                else { // Format F2
                     opcData = (byte)getBits( opCode, 4, 7 );
+                    logger.info( "Format F2: opcData = " + intHexBin(opcData) );
+                }
             }
             else {
-                logger.logError("INVALID number of operands '" + numOprd + "' at PC = " + (PC-2));
+                logger.logError( "INVALID number of operands '" + numOprd + "' at PC = " + (PC-2) );
                 H = true ;
             }
-            logger.config( "\tM1 = " + opdM1 + ", M2 = " + opdM2 + ", R1 = " + opdR1 + ", R2 = " + opdR2
-                            + ", opcData = " + opcData );
+            logger.config("\tM1 = " + opdM1 + ", M2 = " + opdM2 + "; R1 = " + byteInHex(opdR1) + ", R2 = " + byteInHex(opdR2));
         }
 
         /** Fetch the operands, according to their number (numOprd) and addressing modes (M1 or M2) */
@@ -748,10 +769,7 @@ class Sim68k {
                     logger.info( TMPR.dsp() + " = " + TMPS.dsp() + " + " + TMPD.dsp() );
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
-                    boolean v1 = ( Sm & Dm & !Rm );
-                    boolean v2 = ( !Sm & !Dm & Rm );
-                    logger.fine( "v1 = " + v1 + "; and v2 = " + v2 );
-                    V = v1 | v2 ;
+                    V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
                     logger.fine( "V = " + V );
                     C = ( Sm & Dm ) | ( !Rm & Dm ) | ( Sm & !Rm );
                     TMPR.write( opAddr2, DS, opdM2, opdR2 );
@@ -759,7 +777,8 @@ class Sim68k {
                 // add quick
                 case iADDQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
-                    TMPS.set( setByte(0, TwoBits.byte0, opcData) );
+//                    TMPS.set( setByte(0, TwoBits.byte0, opcData) );
+                    TMPS.fillWithData( DS, opcData );
                     // Sign extension if W or L ??
                     TMPR.add( TMPD, TMPS );
                     logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " + " + TMPS.dsp() );
@@ -784,8 +803,9 @@ class Sim68k {
                 // sub quick
                 case iSUBQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
-                    TMPS.set( 0 );
-                    TMPS.set( setByte(TMPS.get(), TwoBits.byte0, opcData) );
+//                    TMPS.set( 0 );
+//                    TMPS.set( setByte(TMPS.get(), TwoBits.byte0, opcData) );
+                    TMPS.fillWithData( DS, opcData );
                     // Sign extension if W or L ??
                     TMPR.subtract( TMPD, TMPS );
                     logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
@@ -1028,8 +1048,9 @@ class Sim68k {
                 // move quick
                 case iMOVQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
-                    TMPD.set( setByte(TMPD.get(), TwoBits.byte0, opcData) );
-                    logger.info( TMPD.dsp() );
+                    TMPD.fillWithData( DS, opcData );
+//                    TMPD.set( setByte(TMPD.get(), TwoBits.byte0, opcData) );
+//                    logger.info( TMPD.dsp() );
                     // Sign extension if W or L ??
                     setZN( TMPD );
                     V = false;
