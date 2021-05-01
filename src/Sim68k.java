@@ -211,26 +211,57 @@ class Sim68k {
     ****************************************************************************** */
 
     /**
-     *  Return a subString of bits between FirstBit and LastBit from a word <br>
+        Return a short with bits between FirstBit and LastBit of an int <br>
         Ex: <br>
           Bit Positions: 15-12 11-8  7-4   3-0 <br>
           wV = 0x1234 =  0001  0010  0011  0100 <br>
           FirstBit = 3, LastBit = 9 <br>
           The bits from 3 to 9 are:  10 0011 0 <br>
-          So the function returns 0x0046 (0000 0000 0100 0110)
+          So the function returns 0x0046 (0000 0000 0100 0110) <br>
+        <em>NOTE:</em> even when the value with the required bits is a short, <b>need</b> to pass an int <br>
+                       so the proper sign bits get right-shifted in from the MSW of the int
+        @param wV int to extract bits from
+        @param FirstBit first bit to find
+        @param LastBit  last bit to find
+        @return short with required bits set
      */
     short getBits( final int wV, final int FirstBit, final int LastBit) {
+        if( FirstBit < 0 || LastBit > 31 || FirstBit > LastBit || LastBit - FirstBit > 15 ) {
+            logger.warning( "IMPROPER value for FirstBit = " + FirstBit + " or LastBit = " + LastBit );
+            return 0;
+        }
         return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
     }
 
-    /** In an int set the bit indicated by posn to val (false or true) */
+    /**
+     *  In an int set the bit indicated by posn to val (false = 0 or true = 1)
+     *  @param nV int to modify
+     *  @param posn position to set
+     *  @param val  bit value to use
+     *  @return int with modified bit
+     */
     int setBit(int nV, final short posn, final boolean val) {
+        if( posn < 0 || posn > 31 ) {
+            logger.warning( "IMPROPER value for posn = " + posn );
+            return 0;
+        }
         byte bt = (val) ? (byte)1 : (byte)0 ;
         return (nV & (0xFFFFFFFF - (1 << posn))) | (bt << posn) ;
     }
 
-    /** In an int set the bits between first and last to the least significant bits of val */
+    /**
+     *  In an int set the bits between first and last inclusive to the least significant bits of val
+     *  @param nV int to modify
+     *  @param first first bit to set
+     *  @param last last bit to set
+     *  @param val  value supplying the bits
+     *  @return int with modified bits
+     */
     int setBits(int nV, final byte first, final byte last, final short val) {
+        if( first < 0 || last > 31 || first > last || last - first > 15 ) {
+            logger.warning( "IMPROPER value for first = " + first + " or last = " + last );
+            return 0;
+        }
         short pos;
         int result = nV;
         for( pos = first; pos <= last; pos++ )
@@ -238,7 +269,13 @@ class Sim68k {
         return result;
     }
 
-    /** In an int set one byte indicated by posn to val */
+    /**
+     *  In an int set one byte indicated by posn to val
+     *  @param nV int to modify
+     *  @param posn byte to modify
+     *  @param val  byte value to use
+     *  @return int with modified byte
+     */
     int setByte(int nV, final TwoBits posn, final byte val) {
         switch( posn ) {
             case byte0 -> { return (nV & 0xFFFFFF00) | val; }
@@ -769,7 +806,7 @@ class Sim68k {
                     TMPS.fill( opAddr1, DS, opdM1, opdR1 );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.add( TMPS, TMPD );
-                    logger.info( TMPR.dsp() + " = " + TMPS.dsp() + " + " + TMPD.dsp() );
+                    logger.info( "ADD: " + TMPR.dsp() + " = " + TMPS.dsp() + " + " + TMPD.dsp() );
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
@@ -782,7 +819,7 @@ class Sim68k {
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPS.fillWithData( DS, opcData );
                     TMPR.add( TMPD, TMPS );
-                    logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " + " + TMPS.dsp() );
+                    logger.info( "ADDQ: " + TMPR.dsp() + " = " + TMPD.dsp() + " + " + TMPS.dsp() );
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( Sm & Dm & !Rm ) | ( !Sm & !Dm & Rm );
@@ -794,7 +831,7 @@ class Sim68k {
                     TMPS.fill( opAddr1, DS, opdM1, opdR1 );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.subtract( TMPD, TMPS );
-                    logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
+                    logger.info( "SUB: " + TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
@@ -806,7 +843,7 @@ class Sim68k {
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPS.fillWithData( DS, opcData );
                     TMPR.subtract( TMPD, TMPS );
-                    logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
+                    logger.info( "SUBQ: " + TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
                     setZN( TMPR );
                     setSmDmRm( TMPS, TMPD, TMPR );
                     V = ( !Sm & Dm & !Rm ) | ( Sm & !Dm & Rm );
@@ -823,7 +860,7 @@ class Sim68k {
                         if( getBits( (short)TMPD.get(), 15, 15) == 1 )
                             TMPD.set( TMPD.get() | 0xFFFF0000 );
                         TMPR.multiply( TMPD, TMPS );
-                        logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " * " + TMPS.dsp() );
+                        logger.info( "MULS: " + TMPR.dsp() + " = " + TMPD.dsp() + " * " + TMPS.dsp() );
                         setZN( TMPR );
                         V = false;
                         C = false;
@@ -862,7 +899,7 @@ class Sim68k {
                                 int ss3 = setShort( tmpd_div_l, MOST, (short)tmpd_mod_l );
                                 TMPR.set( ss3 );
                             }
-                            logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " / " + TMPS.dsp() );
+                            logger.info( "DIVS: " + TMPR.dsp() + " = " + TMPD.dsp() + " / " + TMPS.dsp() );
                             setZN( TMPR );
                             C = false ;
                             TMPR.write( opAddr2, DS, opdM2, opdR2 );
@@ -901,7 +938,7 @@ class Sim68k {
                     TMPS.fill( opAddr1, DS, opdM1, opdR1 );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.set( TMPD.get() & TMPS.get() );
-                    logger.fine( TMPR.dsp() + " = " + TMPD.dsp() + " & " + TMPS.dsp() );
+                    logger.fine( "AND: " + TMPR.dsp() + " = " + TMPD.dsp() + " & " + TMPS.dsp() );
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -912,7 +949,7 @@ class Sim68k {
                     TMPS.fill( opAddr1, DS, opdM1, opdR1 );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.set( TMPD.get() | TMPS.get() );
-                    logger.fine( TMPR.dsp() + " = " + TMPD.dsp() + " | " + TMPS.dsp() );
+                    logger.fine( "OR: " + TMPR.dsp() + " = " + TMPD.dsp() + " | " + TMPS.dsp() );
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -923,7 +960,7 @@ class Sim68k {
                     TMPS.fill( opAddr1, DS, opdM1, opdR1 );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.set( TMPD.get() ^ TMPS.get() );
-                    logger.fine( TMPR.dsp() + " = " + TMPD.dsp() + " ^ " + TMPS.dsp() );
+                    logger.fine( "EOR: " + TMPR.dsp() + " = " + TMPD.dsp() + " ^ " + TMPS.dsp() );
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -931,7 +968,7 @@ class Sim68k {
                     break;
                 // shift left
                 case iLSL:
-                    logger.fine( "iLSL: opcData = " + opcData );
+                    logger.fine( "LSL: opcData = " + opcData );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.set( TMPD.get() << opcData );
                     logger.fine( TMPR.dsp() );
@@ -944,7 +981,7 @@ class Sim68k {
                     break;
                 // shift right
                 case iLSR:
-                    logger.fine( "iLSR: opcData = " + opcData );
+                    logger.fine( "LSR: opcData = " + opcData );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPR.set( TMPD.get() >>> opcData );
                     logger.fine( TMPR.dsp() );
@@ -955,10 +992,10 @@ class Sim68k {
                     break;
                 // rotate left
                 case iROL:
-                    logger.fine( "iROL: opcData = " + opcData );
+                    logger.fine( "ROL: opcData = " + opcData );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     opcData = (byte)( opcData % (8 * DS.sizeValue()) );
-                    logger.fine( "iROL: opcData = " + opcData );
+                    logger.fine( "ROL: opcData = " + opcData );
                     TMPR.set( TMPD.get() << opcData );
                     logger.fine( TMPR.dsp() );
                     TMPS.set( TMPD.get() >>> ((8*DS.sizeValue()) - opcData) );
@@ -973,10 +1010,10 @@ class Sim68k {
                     break;
                 // rotate right
                 case iROR:
-                    logger.fine( "iROR: opcData = " + opcData );
+                    logger.fine( "ROR: opcData = " + opcData );
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     opcData = (byte)( opcData % (8*DS.sizeValue()) );
-                    logger.fine( "iROR: opcData = " + opcData );
+                    logger.fine( "ROR: opcData = " + opcData );
                     TMPR.set( TMPD.get() >>> opcData );
                     logger.fine( TMPR.dsp() );
                     TMPR.set( setBits( TMPR.get(), (byte)(8*DS.sizeValue()-opcData),
