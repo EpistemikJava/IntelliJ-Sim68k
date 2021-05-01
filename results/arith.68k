@@ -19,52 +19,52 @@ Status Bits: H:false N:true Z:false V:true C:false
 Status Bits: H:false N:true Z:false V:false C:false
 [$6] = $DCAC (word)
 Status Bits: H:false N:false Z:true V:false C:true
-[ D0 ]  = $0 (long)
+[ D0 ] = $0 (long)
 Status Bits: H:false N:false Z:false V:false C:false
-[ D0 ]  = $100 (long)
+[ D0 ] = $100 (long)
 Status Bits: H:false N:true Z:false V:false C:true
 [$C] = $FFFF5E9A (long)
 Enter a value (long) for the register D1: 0
 [$C] = $FFFFCDEF (long)
-[ D0 ]  = $F6 (long)
-[ D0 ]  = $F6 (long)
+[ D0 ] = $F6 (long)
+[ D0 ] = $F6 (long)
 [$6] = $9978 (word)
 [$6] = $5678 (word)
 Status Bits: H:false N:false Z:false V:true C:false
 Enter a value (long) for the register D1: 0
-[ D0 ]  = $FFFFFFFD (long)
-[ D0 ]  = $FFFF0003 (long)
-[ D0 ]  = $FFFF00FD (long)
-[ D0 ]  = $FFFF0003 (long)
+[ D0 ] = $FFFFFFFD (long)
+[ D0 ] = $FFFF0003 (long)
+[ D0 ] = $FFFF00FD (long)
+[ D0 ] = $FFFF0003 (long)
 Status Bits: H:false N:false Z:false V:false C:true
 Enter a value (long) for the register D1: 0
 Enter a value (word) for the register D0: $ff80
 Enter a value (word) for the register D1: $007f
-[ D0 ]  = $FFFFC080 (long)
+[ D0 ] = $FFFFC080 (long)
 Enter a value (long) for the register D0: $ffffffff
 Enter a value (word) for the register D1: $fffe
-[ D0 ]  = $FFFF0000 (long)
+[ D0 ] = $FFFF0000 (long)
 Status Bits: H:false N:true Z:false V:false C:false
 Enter a value (word) for the register D0: -5
 Enter a value (word) for the register D1: -5
-[ D0 ]  = $19 (long)
+[ D0 ] = $19 (long)
 Enter a value (long) for the register D0: $ffff0000
 Enter a value (word) for the register D1: $7e
-[ D0 ]  = $FFF0FDF8 (long)
+[ D0 ] = $FFF0FDF8 (long)
 Status Bits: H:false N:true Z:false V:false C:false
 Enter a value (word) for the register D0: 10
 Enter a value (word) for the register D1: -10
-[ D0 ]  = $FFFFFF9C (long)
+[ D0 ] = $FFFFFF9C (long)
 Enter a value (long) for the register D0: 10
 Enter a value (word) for the register D1: -10
-[ D0 ]  = $FFFF (long)
+[ D0 ] = $FFFF (long)
 Status Bits: H:false N:false Z:false V:false C:false
 Enter a value (word) for the register D0: $ffff
 Enter a value (word) for the register D1: $ffff
-[ D0 ]  = $1 (long)
+[ D0 ] = $1 (long)
 Enter a value (long) for the register D0: $0007ffff
 Enter a value (word) for the register D1: $2
-[ D0 ]  = $1FFFF (long)
+[ D0 ] = $1FFFF (long)
 Status Bits: H:false N:false Z:false V:true C:false
 
 Your Option ('e' to execute a program, 'q' to quit): q
