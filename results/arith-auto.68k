@@ -1,0 +1,56 @@
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=42259:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
+PROGRAM STARTED ON Thread[main,5,main]
+May 01, 2021 12:52:29 P.M. LogControl <init>
+SEVERE: INITIAL file log level = CONFIG
+SEVERE: Sim68k record #1
+LogControl setRootLogger
+INITIAL console log level = WARNING
+
+LogControl.setRootLogger >> root logger has 1 handler(s):
+    java.util.logging.ConsoleHandler@443b7951
+
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): arith-auto
+
+Program loaded. 278 bytes in memory.
+Status Bits: H:false N:true Z:false V:true C:false
+[$6] = $9978 (word)
+Status Bits: H:false N:true Z:false V:false C:false
+[$6] = $DCAC (word)
+Status Bits: H:false N:false Z:true V:false C:true
+[ D0 ] = $0 (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[ D0 ] = $100 (long)
+Status Bits: H:false N:true Z:false V:false C:true
+[$C] = $FFFF5E9A (long)
+[$C] = $FFFFCDEF (long)
+[ D0 ] = $F6 (long)
+[ D0 ] = $F6 (long)
+[$6] = $9978 (word)
+[$6] = $5678 (word)
+Status Bits: H:false N:false Z:false V:true C:false
+[ D0 ] = $FFFFFFFD (long)
+[ D0 ] = $FFFF0003 (long)
+[ D0 ] = $FFFF00FD (long)
+[ D0 ] = $FFFF0003 (long)
+Status Bits: H:false N:false Z:false V:false C:true
+[$16] = $FFFFC080 (long)
+[$1A] = $FFFF0000 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+[$20] = $19 (long)
+[$24] = $FFF0FDF8 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+[ D0 ] = $FFFFFF9C (long)
+[ D0 ] = $FFFF (long)
+Status Bits: H:false N:false Z:false V:false C:false
+[$1A] = $1 (long)
+[$2A] = $1FFFF (long)
+Status Bits: H:false N:false Z:false V:true C:false
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
+
+Process finished with exit code 0
