@@ -86,11 +86,11 @@ class Sim68k {
      */
     enum DataSize {
         /** 8 bits */
-        ByteSize((byte)1, "byte"),
+        ByteSize( (byte)1, "byte" ),
         /** 16 bits */
-        WordSize((byte)2, "word"),
+        WordSize( (byte)2, "word" ),
         /** 32 bits */
-        LongSize((byte)4, "long");
+        LongSize( (byte)4, "long" );
 
         /** in bytes */
         private final byte size;
@@ -110,7 +110,7 @@ class Sim68k {
         if( code == 0 ) return DataSize.ByteSize;
         if( code == 1 ) return DataSize.WordSize;
         if( code == 2 ) return DataSize.LongSize;
-        logger.logError( "INVALID DATA SIZE!" );
+        logger.logError( "INVALID DataSize code = " + code + "!" );
         return null ;
     }
 
@@ -127,20 +127,22 @@ class Sim68k {
     }
     /** get the proper AddressMode from the value in the OpCode */
     static AddressMode getAddressMode(int code) {
-        if( code == 0 ) return AddressMode.DATA_REGISTER_DIRECT ;
-        if( code == 1 ) return AddressMode.ADDRESS_REGISTER_DIRECT ;
-        if( code == 2 ) {
-            logger.warning( "UNUSED ADDRESS MODE: AM_TWO_UNUSED!" );
-            return AddressMode.AM_TWO_UNUSED ;
+        switch( code ) {
+            case 0 -> { return AddressMode.DATA_REGISTER_DIRECT; }
+            case 1 -> { return AddressMode.ADDRESS_REGISTER_DIRECT; }
+            case 2 -> {
+                logger.warning( "UNUSED ADDRESS MODE: AM_TWO_UNUSED!" );
+                return AddressMode.AM_TWO_UNUSED;
+            }
+            case 3 -> { return AddressMode.RELATIVE_ABSOLUTE; } // i.e. relative OR absolute addressing
+            case 4 -> { return AddressMode.ADDRESS_REGISTER_INDIRECT; }
+            case 5 -> {
+                logger.warning( "UNUSED ADDRESS MODE: AM_FIVE_UNUSED!" );
+                return AddressMode.AM_FIVE_UNUSED;
+            }
+            case 6 -> { return AddressMode.ADDRESS_REGISTER_INDIRECT_POSTINC; }
+            case 7 -> { return AddressMode.ADDRESS_REGISTER_INDIRECT_PREDEC; }
         }
-        if( code == 3 ) return AddressMode.RELATIVE_ABSOLUTE ; // i.e. relative OR absolute addressing
-        if( code == 4 ) return AddressMode.ADDRESS_REGISTER_INDIRECT ;
-        if( code == 5 ) {
-            logger.warning( "UNUSED ADDRESS MODE: AM_FIVE_UNUSED!" );
-            return AddressMode.AM_FIVE_UNUSED ;
-        }
-        if( code == 6 ) return AddressMode.ADDRESS_REGISTER_INDIRECT_POSTINC ;
-        if( code == 7 ) return AddressMode.ADDRESS_REGISTER_INDIRECT_PREDEC ;
         logger.logError( "NO ADDRESS MODE for code = " + code + "!" );
         return null ;
     }
@@ -238,12 +240,13 @@ class Sim68k {
 
     /** In an int set one byte indicated by posn to val */
     int setByte(int nV, final TwoBits posn, final byte val) {
-        switch (posn) {
+        switch( posn ) {
             case byte0 -> { return (nV & 0xFFFFFF00) | val; }
             case byte1 -> { return (nV & 0xFFFF00FF) | (val << 8); }
             case byte2 -> { return (nV & 0xFF00FFFF) | (val << 16); }
             case byte3 -> { return (nV & 0x00FFFFFF) | (val << 24); }
         }
+        logger.logError( "INVALID byte position = " + posn + "?!" );
         return 0; // should NEVER reach here
     }
 
@@ -274,7 +277,7 @@ class Sim68k {
     /**
      *  In an int SET one word indicated by MSW to val <br>
      *  MSW: false = Least Significant Word, true = Most Significant Word <br>
-     *  NEED this version for the fill() and write() methods of <em>TempReg</em>
+     *  <b>NEED</b> this version for the fill() and write() methods of <em>TempReg</em>
      */
     int setWord(int nV, final boolean MSW, final int val) {
         logger.finer( "nV = " + nV + " | " + intHex(nV) );
@@ -294,7 +297,7 @@ class Sim68k {
     /**
      *  In an int SET one word indicated by MSW to val <br>
      *  MSW: false = Least Significant Word, true = Most Significant Word <br>
-     *  NEED this version for <em>signed division</em>
+     *  <b>NEED</b> this version for <em>signed division</em>
      */
     int setShort(int nV, final boolean MSW, final short val) {
         if( MSW )
@@ -304,11 +307,11 @@ class Sim68k {
 
     /* ***************************************************************************
 
-       Functions to display values as hex and/or binary numbers
+       Functions to display numbers as hex and/or binary values
 
      ***************************************************************************** */
 
-    /** utility function for easy display of a byte value as an unsigned hex String */
+    /** utility function for easy display of a byte value as an UNSIGNED hex String */
     static String byteInHex(byte value) {
         return value + " | " + intHex( Byte.toUnsignedInt(value) );
     }
@@ -334,6 +337,7 @@ class Sim68k {
             name = nom;
         }
         private int value;
+        /** Dest, Source or Result */
         private final String name;
 
         void set(int val) { value = val; }
@@ -349,7 +353,6 @@ class Sim68k {
         void subtract(TempReg trA, TempReg trB) { value = trA.get() - trB.get() ; }
         /** set value to the product of the values in the parameters */
         void multiply(TempReg trA, TempReg trB) { value = trA.get() * trB.get() ; }
-
 
         /**
          *  Transfer the data from an OpCode with format F2 to this temporary register
@@ -401,7 +404,7 @@ class Sim68k {
                 case ADDRESS_REGISTER_DIRECT -> value = AR[regNo] ;
 
                 case RELATIVE_ABSOLUTE -> {
-                    // We need to access memory, except for branching & MOVA.
+                    // We need to access memory, except for branching & MOVA
                     MAR = opAddr;
                     mem.access( dsz, READ );
                     value = MDR ;
@@ -777,9 +780,7 @@ class Sim68k {
                 // add quick
                 case iADDQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
-//                    TMPS.set( setByte(0, TwoBits.byte0, opcData) );
                     TMPS.fillWithData( DS, opcData );
-                    // Sign extension if W or L ??
                     TMPR.add( TMPD, TMPS );
                     logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " + " + TMPS.dsp() );
                     setZN( TMPR );
@@ -803,10 +804,7 @@ class Sim68k {
                 // sub quick
                 case iSUBQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
-//                    TMPS.set( 0 );
-//                    TMPS.set( setByte(TMPS.get(), TwoBits.byte0, opcData) );
                     TMPS.fillWithData( DS, opcData );
-                    // Sign extension if W or L ??
                     TMPR.subtract( TMPD, TMPS );
                     logger.info( TMPR.dsp() + " = " + TMPD.dsp() + " - " + TMPS.dsp() );
                     setZN( TMPR );
@@ -844,7 +842,7 @@ class Sim68k {
                                 flag = true;
                                 TMPS.set( (TMPS.get() ^ 0xFFFF) + 1 );
                                 logger.info( TMPS.dsp() );
-                                TMPD.set( ~(TMPD.get()) + 1 );
+                                TMPD.set( ~TMPD.get() + 1 );
                                 logger.info( TMPD.dsp() );
                             }
                             logger.info( TMPS.dsp() + "; " + TMPD.dsp() );
@@ -856,6 +854,8 @@ class Sim68k {
                                 TMPR.set( ss2 );
                             }
                             else {
+                                /* for an accurate simulation, should only do interim calculations in TempRegs,
+                                   but leaving temp variables here just for clarity */
                                 int wtmps_least = getWord( TMPS.get(), LEAST );
                                 int tmpd_div_l = TMPD.get() / wtmps_least ;
                                 int tmpd_mod_l = TMPD.get() % wtmps_least ;
@@ -890,7 +890,7 @@ class Sim68k {
                 // bitwise
                 case iNOT:
                     TMPD.fill( opAddr1, DS, opdM1, opdR1 );
-                    TMPR.set( ~( TMPD.get()) );
+                    TMPR.set( ~TMPD.get() );
                     setZN( TMPR );
                     V = false;
                     C = false;
@@ -1049,9 +1049,6 @@ class Sim68k {
                 case iMOVQ:
                     TMPD.fill( opAddr2, DS, opdM2, opdR2 );
                     TMPD.fillWithData( DS, opcData );
-//                    TMPD.set( setByte(TMPD.get(), TwoBits.byte0, opcData) );
-//                    logger.info( TMPD.dsp() );
-                    // Sign extension if W or L ??
                     setZN( TMPD );
                     V = false;
                     C = false;
@@ -1076,7 +1073,6 @@ class Sim68k {
                     if( checkCond( ((opdM1 == AddressMode.RELATIVE_ABSOLUTE) && (opdM2 == AddressMode.ADDRESS_REGISTER_DIRECT)),
                                    "Invalid Addressing Mode" )
                             && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
-                        //setResult( OpAddr1, OpAddr2, DS, M2, R2 );
                         AR[opdR2] = (short)getWord( opAddr1, LEAST );
                     break;
                 // input
@@ -1117,7 +1113,7 @@ class Sim68k {
                             radix = 16 ;
                             inpStr = inpStr.substring(1) ;
                         }
-                        // Java only has signed numbers, so need a long to accept numbers like 0xFFFFFFFF
+                        // Java only has signed numbers, so need a long to accept input like 'FFFFFFFF'
                         inpl = Long.parseLong( inpStr, radix );
                         logger.info("Long.parseLong(" + inpStr + ", " + radix + ") = " + inpl);
                     }
@@ -1140,7 +1136,7 @@ class Sim68k {
                         case ADDRESS_REGISTER_DIRECT -> System.out.print( "[ A" + (int)opdR1 + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT -> System.out.print( "[" + intHex(AR[opdR1]) + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT_POSTINC ->
-                                // numBytes(DS) subtracted to compensate post-incrementation
+                                /* numBytes(DS) subtracted to compensate post-incrementation */
                                 System.out.print( "[" + intHex( AR[opdR1] - DS.sizeValue() ) + " ] = " );
                         case ADDRESS_REGISTER_INDIRECT_PREDEC -> System.out.print( "[" + intHex(AR[opdR1]) + "] = ");
                         case RELATIVE_ABSOLUTE -> System.out.print( "[" + intHex( opAddr1 ) + "] = " );
