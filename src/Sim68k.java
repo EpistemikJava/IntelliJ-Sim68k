@@ -73,7 +73,7 @@ class Sim68k {
     static final boolean WRITE = false,
                           READ = true ;
     /** identify which byte within a long */
-    enum TwoBits { byte0, byte1, byte2, byte3 }
+    enum BytePosn { byte0, byte1, byte2, byte3 }
 
     /**
      *  Indicate to an operation to use byte, word or long <br>
@@ -199,16 +199,14 @@ class Sim68k {
     /** Temporary Registers Dest, Src, Result */
     TempReg TMPD, TMPS, TMPR;
 
-    /* ***************************************************************************
-
+    /*
       Functions for bit manipulation
      ================================
      Pascal, unlike C, does not have operators that allow easy manipulation
      of bits within a byte or short. The following procedures and functions
      are designed to help you manipulate (extract and set) the bits.
      You may use or modify these procedures/functions or create others.
-
-    ****************************************************************************** */
+    **************************************************************************************************** */
 
     /**
         Return a short with bits between FirstBit and LastBit of an int <br>
@@ -221,16 +219,16 @@ class Sim68k {
         <em>NOTE:</em> even when the value with the required bits is a short, <b>need</b> to pass an int <br>
                        so the proper sign bits get right-shifted in from the MSW of the int
         @param wV int to extract bits from
-        @param FirstBit first bit to find
-        @param LastBit  last bit to find
+        @param firstBit first bit to find
+        @param lastBit  last bit to find
         @return short with required bits set
      */
-    short getBits( final int wV, final int FirstBit, final int LastBit) {
-        if( FirstBit < 0 || LastBit > 31 || FirstBit > LastBit || LastBit - FirstBit > 15 ) {
-            logger.warning( "IMPROPER value for FirstBit = " + FirstBit + " or LastBit = " + LastBit );
+    short getBits( final int wV, final int firstBit, final int lastBit) {
+        if( firstBit < 0 || lastBit > 31 || firstBit > lastBit || lastBit - firstBit > 15 ) {
+            logger.warning( "IMPROPER value for FirstBit = " + firstBit + " or LastBit = " + lastBit );
             return 0;
         }
-        return (short)( (wV >> FirstBit) & ((2 << (LastBit - FirstBit)) - 1) );
+        return (short)( (wV >> firstBit) & ((2 << (lastBit - firstBit)) - 1) );
     }
 
     /**
@@ -276,7 +274,7 @@ class Sim68k {
      *  @param val  byte value to use
      *  @return int with modified byte
      */
-    int setByte(int nV, final TwoBits posn, final byte val) {
+    int setByte(int nV, final BytePosn posn, final byte val) {
         switch( posn ) {
             case byte0 -> { return (nV & 0xFFFFFF00) | val; }
             case byte1 -> { return (nV & 0xFFFF00FF) | (val << 8); }
@@ -287,14 +285,12 @@ class Sim68k {
         return 0; // should NEVER reach here
     }
 
-    /* ***************************************************************************
-
+    /*
       The word, i.e. short (16 bit) utility functions are problematic
       as Java silently promotes any short used in a bit shift operation
       to an int, WITH sign extension!!
       >> and in some cases this DOES NOT give the required result
-
-     ***************************************************************************** */
+    **************************************************************************************************** */
 
     /**
      *  GET most or least significant word from an int <br>
@@ -342,11 +338,9 @@ class Sim68k {
         return (nV & 0xFFFF0000) | val ;
     }
 
-    /* ***************************************************************************
-
+    /*
        Functions to display numbers as hex and/or binary values
-
-     ***************************************************************************** */
+    **************************************************************************************************** */
 
     /** utility function for easy display of a byte value as an UNSIGNED hex String */
     static String byteInHex(byte value) {
@@ -399,7 +393,7 @@ class Sim68k {
         void fillWithData( DataSize dsz, byte data ) {
             logger.info( dsp() + "; dsz = " + dsz.strValue() + "; data = " + byteInHex(data) );
             switch( dsz ) {
-                case ByteSize -> value = setByte( value, TwoBits.byte0, data );
+                case ByteSize -> value = setByte( value, BytePosn.byte0, data );
                 case WordSize -> value = setWord( value, LEAST, data );
                 case LongSize -> {
                     value = setWord( value, LEAST, data );
@@ -410,14 +404,12 @@ class Sim68k {
             logger.info( dsp() );
         }
 
-        /* ***************************************************************************
-
+        /*
          Since many instructions will make local fetches between temporary registers
          (TMPS, TMPD, TMPR) & memory or the Dn & An registers it would be
          useful to create procedures to transfer the shorts/bytes between them.
          Here are 2 suggestions of procedures to do this.
-
-         **************************************************************************** */
+        ************************************************************************************************ */
 
         /**
          *  Transfer the contents of a CPU Register OR Memory to this temporary register
@@ -433,7 +425,7 @@ class Sim68k {
                 case DATA_REGISTER_DIRECT -> {
                     value = DR[regNo] ;
                     if( dsz == DataSize.ByteSize )
-                        value = setByte( DR[regNo], TwoBits.byte1, (byte)0 );
+                        value = setByte( DR[regNo], BytePosn.byte1, (byte)0 );
                     if( dsz.sizeValue() <= DataSize.WordSize.sizeValue() ) {
                         value = setWord( value, MOST, 0 );
                     }
@@ -1043,38 +1035,38 @@ class Sim68k {
                     break;
                 // branch
                 case iBRA:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         PC = opAddr1;
                     break;
                 // branch if overflow
                 case iBVS:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         if( V ) PC = opAddr1;
                     break;
                 // branch if equal
                 case iBEQ:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         if( Z ) PC = opAddr1;
                     break;
                 // branch if carry
                 case iBCS:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         if( C ) PC = opAddr1;
                     break;
                 // branch if GTE
                 case iBGE:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         if( N == V ) PC = opAddr1;
                     break;
                 // branch if LTE
                 case iBLE:
-                    if( checkCond( ( opdM1 == AddressMode.RELATIVE_ABSOLUTE), "Invalid Addressing Mode" )
-                            && checkCond( (DS == DataSize.WordSize ), "Invalid Data Size" ) )
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE, "Invalid Addressing Mode" )
+                            && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         if( (N^V) ) PC = opAddr1;
                     break;
                 // move
@@ -1107,7 +1099,7 @@ class Sim68k {
                     break;
                 // move to address
                 case iMOVA:
-                    if( checkCond( ((opdM1 == AddressMode.RELATIVE_ABSOLUTE) && (opdM2 == AddressMode.ADDRESS_REGISTER_DIRECT)),
+                    if( checkCond( opdM1 == AddressMode.RELATIVE_ABSOLUTE  &&  opdM2 == AddressMode.ADDRESS_REGISTER_DIRECT,
                                    "Invalid Addressing Mode" )
                             && checkCond( DS == DataSize.WordSize, "Invalid Data Size" ) )
                         AR[opdR2] = (short)getWord( opAddr1, LEAST );
@@ -1280,7 +1272,6 @@ class Sim68k {
                 e.printStackTrace();
                 return false;
             }
-
             System.out.println("Program loaded. " + address + " bytes in memory.");
             return true ;
         }
@@ -1375,20 +1366,20 @@ class Sim68k {
                         System.out.print( "Name of the 68k binary program ('.68b' will be added automatically): " );
                         input = inScanner.next();
                         logger.info( "program input = " + input );
-                        if( proc.loadProgram( input + ".68b" ) )
+                        if( proc.loadProgram(input + ".68b") )
                             proc.start();
                         else
                             logger.logError( "PROBLEM loading File '" + input + ".68b'!" );
                     }
                     case TEST -> {
                         // info on system data sizes
-                        System.out.println( "sizeof( byte ) == " + Byte.BYTES );
-                        System.out.println( "sizeof( char ) == " + Character.BYTES );
-                        System.out.println( "sizeof( short ) == " + Short.BYTES );
-                        System.out.println( "sizeof( int ) == " + Integer.BYTES );
-                        System.out.println( "sizeof( long ) == " + Long.BYTES );
+                        System.out.println( "size of byte  = " + Byte.BYTES );
+                        System.out.println( "size of char  = " + Character.BYTES );
+                        System.out.println( "size of short = " + Short.BYTES );
+                        System.out.println( "size of int   = " + Integer.BYTES );
+                        System.out.println( "size of long  = " + Long.BYTES );
                         int t = 0xFFFFFFFF;
-                        System.out.println( "int t = 0xFFFFFFFF = " + t + " = " + intHexBin(t) );
+                        System.out.println( "int t = 0xFFFFFFFF = " + intHexBin(t) );
                         String hexstr = "FFFFFFFF";
                         System.out.println( "String hexstr = " + hexstr );
                         long l = Long.parseLong( hexstr, 16 );
@@ -1401,7 +1392,7 @@ class Sim68k {
         } catch (Exception e) {
             e.printStackTrace();
             logger.logError( "PROBLEM RUNNING PROGRAM!" );
-            System.exit( 1350 );
+            System.exit( 1395 );
         }
         logger.info("\tPROGRAM ENDED");
     }
