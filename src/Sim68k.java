@@ -575,7 +575,7 @@ class Sim68k {
                     }
                     case LongSize -> MDR = ( (memory[MAR] * 0x1000000) & 0xFF000000 ) |
                                            ( (memory[MAR+1] * 0x10000) & 0x00FF0000 ) |
-                                           ( (memory[MAR+2] * 0x100) & 0x0000FF00 ) |
+                                           ( (memory[MAR+2] * 0x100)   & 0x0000FF00 ) |
                                            (  memory[MAR+3] & 0x000000FF );
                     default -> {
                         logger.logError("\n*** INVALID data size: " + dsz.strValue());
@@ -595,7 +595,7 @@ class Sim68k {
                 case WordSize -> {
 //                    memory[MAR]   = (byte)( (MDR / 0x100) % 0x100 ); // MSB: 8 first bits
                     // division DOES NOT WORK because Java rounds up to next integer instead of just dropping the fraction part
-                    byte mdrb = (byte)( (MDR >> 8) & 0x000000FF );
+                    byte mdrb = (byte)( (MDR >> 8)  &  0x000000FF );
                     logger.finer( "mdrb = " + mdrb + " | " + intHex(mdrb) );
                     memory[MAR]   = mdrb; // MSB: 8 first bits
                     memory[MAR+1] = (byte)( MDR % 0x100 ); // LSB: 8 last bits
@@ -606,7 +606,7 @@ class Sim68k {
                 case LongSize -> {
                     memory[MAR]   = (byte)( (MDR >> 24) & 0x000000FF );
                     memory[MAR+1] = (byte)( (MDR >> 16) & 0x000000FF );
-                    memory[MAR+2] = (byte)( (MDR >> 8) & 0x000000FF );
+                    memory[MAR+2] = (byte)( (MDR >>  8) & 0x000000FF );
                     memory[MAR+3] = (byte)( MDR % 0x100 );
                     logger.fine( dsz.strValue()
                                     + ".WRITE: memory[" + MAR + "] now = " + byteInHex(memory[MAR])
@@ -674,20 +674,20 @@ class Sim68k {
         /** Update the fields OpId, DS, numOprd, M1, R1, M2, R2 and opcData */
         void decodeInstr() {
             logger.info( "OpCode = " + Integer.toBinaryString(opCode) );
-            DS = getDataSize( getBits(opCode, 9, 10) );
-            opId = (byte)getBits(opCode, 11, 15 );
-            numOprd = (byte)( getBits(opCode, 8, 8) + 1 );
+            DS = getDataSize( getBits(opCode,9,10) );
+            opId = (byte)getBits( opCode, 11, 15 );
+            numOprd = (byte)( getBits(opCode,8,8) + 1 );
 
             logger.config( "OpCode " + intHex(opCode) + " at PC = " + (PC-2)
                            + " :\n\tOpId = " + Mnemo[opId] + ", size = " + DS.strValue() + ", numOprnd = " + numOprd );
 
             if( numOprd > 0 ) { // SHOULD ALWAYS BE TRUE!
-                opdM2 = getAddressMode( getBits(opCode, 1, 3) );
+                opdM2 = getAddressMode( getBits(opCode,1,3) );
                 opdR2 = (byte)getBits( opCode, 0, 0 );
 
                 if( formatF1(opId) )
                     if( opId < iDSR ) {
-                        opdM1 = getAddressMode( getBits(opCode, 5, 7) );
+                        opdM1 = getAddressMode( getBits(opCode,5,7) );
                         opdR1 = (byte)getBits( opCode, 4, 4 );
                     }
                     else { // NEED to reset these for iDSR and iHLT !
@@ -739,15 +739,15 @@ class Sim68k {
             int trVal = tr.get();
             switch (DS) {
                 case ByteSize -> {
-                    short bzw = getBits( (short)getWord(trVal, LEAST), 0, 7 );
+                    short bzw = getBits( (short)getWord(trVal,LEAST), 0, 7 );
                     Z = (bzw == 0);
-                    short bnw = getBits( (short)getWord(trVal, LEAST), 7, 7 );
+                    short bnw = getBits( (short)getWord(trVal,LEAST), 7, 7 );
                     N = (bnw == 1);
                 }
                 case WordSize -> {
-                    short wzw = getBits( (short)getWord(trVal, LEAST), 0, 15 );
+                    short wzw = getBits( (short)getWord(trVal,LEAST), 0, 15 );
                     Z = (wzw == 0);
-                    short wnw = getBits( (short)getWord(trVal, LEAST), 15, 15 );
+                    short wnw = getBits( (short)getWord(trVal,LEAST), 15, 15 );
                     N = (wnw == 1);
                 }
                 case LongSize -> {
