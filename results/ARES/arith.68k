@@ -1,16 +1,18 @@
-/home/marksa/.jdks/openjdk-16.0.2/bin/java -javaagent:/home/marksa/apps/idea-IC-211.7628.21/lib/idea_rt.jar=37235:/home/marksa/apps/idea-IC-211.7628.21/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.2/compile-server/intellij-sim68k_d697cbc3/scratches/out:/home/marksa/git/Java/IntelliJ/IntelliJ-Sim68k/out/production/IntelliJ-Sim68k Sim68k
+/home/marksa/.jdks/openjdk-15.0.2/bin/java -javaagent:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/lib/idea_rt.jar=37251:/home/marksa/apps/IntelliJ/idea-IC-202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/marksa/.cache/JetBrains/IdeaIC2021.1/compile-server/sim68k_c818ad9c/scratches/out:/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/out/production/Sim68k Sim68k
+
 PROGRAM STARTED ON Thread[main,5,main]
-Aug. 05, 2021 12:14:55 P.M. LogControl <init>
+Apr. 27, 2021 1:53:00 P.M. LogControl <init>
 SEVERE: INITIAL file log level = CONFIG
 SEVERE: Sim68k record #1
 LogControl setRootLogger
 INITIAL console log level = WARNING
 
 LogControl.setRootLogger >> root logger has 1 handler(s):
-    java.util.logging.ConsoleHandler@5197848c
+	java.util.logging.ConsoleHandler@443b7951
 
 Your Option ('e' to execute a program, 'q' to quit): e
 Name of the 68k binary program ('.68b' will be added automatically): arith
+
 Program loaded. 176 bytes in memory.
 Status Bits: H:false N:true Z:false V:true C:false
 [$6] = $9978 (word)
@@ -64,6 +66,7 @@ Enter a value (long) for the register D0: $0007ffff
 Enter a value (word) for the register D1: $2
 [ D0 ] = $1FFFF (long)
 Status Bits: H:false N:false Z:false V:true C:false
+
 Your Option ('e' to execute a program, 'q' to quit): q
 Bye!
 
