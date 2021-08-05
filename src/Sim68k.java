@@ -7,7 +7,8 @@
  *
  *  Copyright (c) 2021 Mark Sattolo <epistemik@gmail.com>
  *
- *  Java version created 2021-04
+ *  IntelliJ Java version created 2021-04
+ *  -- updated 2021-08-05
  *
  ********************************************************************************/
 
@@ -1229,7 +1230,7 @@ class Sim68k {
             boolean inComment = false ;
             short address = 0 ;
             String input ;
-            String inputFolder = "/newdata/dev/IntelliJIDEAProjects/Java/Sim68k/in/" ;
+            String inputFolder = "/home/marksa/git/Java/IntelliJ/IntelliJ-Sim68k/in/" ;
             String filename = inputFolder + fname ;
             try
             {
