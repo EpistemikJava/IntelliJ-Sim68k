@@ -5,6 +5,7 @@
  * Copyright (c) 2008-2021 Mark Sattolo <epistemik@gmail.com>
  *
  * IntelliJ-IDEA version created 2021-02-13
+ *  -- updated 2021-08-05
  *
  ********************************************************************************/
 
@@ -255,7 +256,7 @@ public class LogControl {
 
     /** default value */
     static final int MAX_NUM_LOG_FILES = 256,
-            LOGFILE_MAX_BYTES = 1024 * 1024;
+                     LOGFILE_MAX_BYTES = 1024 * 1024;
 
     /** {@link Level} to print initialization messages = Level.SEVERE */
     static final Level INIT_LEVEL = Level.INFO;
@@ -271,8 +272,8 @@ public class LogControl {
 
     /** default Log name parameter */
     static final String
-                PROJECT_NAME  = Sim68k.class.getSimpleName(),
-                LOG_SUBFOLDER = "logs/",
+                     PROJECT_NAME = Sim68k.class.getSimpleName(),
+                    LOG_SUBFOLDER = "logs/",
                 LOG_ROLLOVER_SPEC = "_%u-%g",
                 XML_LOGFILE_TYPE  = ".xml",
                 TEXT_LOGFILE_TYPE = ".log";
