@@ -1,16 +1,17 @@
-/* ******************************************************************************
+/* *******************************************************************************************
  *
  *  Sim68k.java
  *
  *  Ported from Sim68k.cc - originally a Pascal program created in Nov 1999 for CSI2111
  *                        - simulates the functioning of the Motorola 68000 microprocessor
  *
- *  Copyright (c) 2021 Mark Sattolo <epistemik@gmail.com>
+ *  Copyright (c) 2023 Mark Sattolo <epistemik@gmail.com>
  *
- *  IntelliJ Java version created 2021-04
- *  -- updated 2021-08-05
+ *  IntelliJ Java version
+ *  -- created 2021-04
+ *  -- updated 2023-11-10
  *
- ********************************************************************************/
+ *********************************************************************************************/
 
 import java.io.File;
 import java.util.Locale;
@@ -1148,7 +1149,7 @@ class Sim68k {
                         logger.info("Long.parseLong(" + inpStr + ", " + radix + ") = " + inpl);
                     }
                     catch (Exception e) {
-                        e.printStackTrace();
+                        logger.logError( e.getMessage() );
                         return ;
                     }
                     TMPD.set( (int)inpl );
@@ -1270,7 +1271,7 @@ class Sim68k {
                 }
                 fileScanner.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.logError( e.getMessage() );
                 return false;
             }
             System.out.println("Program loaded. " + address + " bytes in memory.");
@@ -1391,7 +1392,7 @@ class Sim68k {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.logError( e.getMessage() );
             logger.logError( "PROBLEM RUNNING PROGRAM!" );
             System.exit( 1395 );
         }
