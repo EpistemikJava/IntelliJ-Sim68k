@@ -1,9 +1,9 @@
-/ ; ******************************************************* /
-/ ; *** Arith.68                                        *** /
-/ ; *** Tests the arithmetic instructions of Sim68k     *** /
-/ ; *** Tests ADD, ADDQ, SUB, SUBQ, MULS, DIVS, NEG     *** /
-/ ; *** Uses  MOVE, MOVEQ, BRA, BVS, INP, DSR, DSP, HLT *** /
-/ ; ******************************************************* /
+/ ; ***************************************************** /
+/ ; *** arith-muldiv.68b                              *** /
+/ ; *** Tests the arithmetic instructions of Sim68k   *** /
+/ ; *** Tests MULS, DIVS                              *** /
+/ ; *** Uses  BRA, BVS, INP, DSR, DSP, HLT            *** /
+/ ; ***************************************************** /
 /  /
 / ;   Assembly Language       OpCode   Oper1   Oper2  /
 / ;                           MSB LSB MSB LSB MSB LSB /
