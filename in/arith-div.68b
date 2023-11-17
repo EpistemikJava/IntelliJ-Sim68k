@@ -1,0 +1,39 @@
+/ ; ***************************************************** /
+/ ; *** arith-div.68b                                 *** /
+/ ; *** Tests the arithmetic instructions of Sim68k   *** /
+/ ; *** Tests DIVS                                    *** /
+/ ; *** Uses  BRA, BVS, INP, DSR, DSP, HLT            *** /
+/ ; ***************************************************** /
+/  /
+/ ;   Assembly Language       OpCode   Oper1   Oper2  /
+/ ;                           MSB LSB MSB LSB MSB LSB /
+/ ;-------------------------------------------------- /
+/ mem $00 - $03 /
+/ ; Branch to the first instruction /
+/ BRA.W @Main             ; / $92 $60 $00 $14
+/ mem $04 - $13 /
+/ ; Declarations /
+/ DEF.W @Var1, #$4334     ; / $43 $34
+/ DEF.W @Var2, #$5678     ; / $56 $78
+/ DEF.L @Var3, #$FFFF90AB ; / $FF $FF $90 $AB
+/ DEF.L @Var4, #$FFFFCDEF ; / $FF $FF $CD $EF
+/ DEF.L @Var5, #$000000F6 ; / $00 $00 $00 $F6
+/ ; Main program /
+/ LABEL @Main             ; /
+/  /
+/ ; Repeats MULS and DIVS until V=true /
+/ ; Tests MULS and DIVS /
+/ ;----------------------- /
+/ LABEL @Loop             ; /
+/ mem $14 - $25 /
+/     INP.L D0            ; / $E4 $00
+/     INP.W D1            ; / $E2 $10
+/     DIVS.L D1, D0       ; / $2D $10
+/     DSP.L D0            ; / $EC $00
+/     DSR.B               ; / $F0 $00
+/ ; If Overflow, stop, otherwise, Loop again. /
+/     BVS.W @End          ; / $9A $60 $00 $26
+/     BRA.W @Loop         ; / $92 $60 $00 $14
+/ mem $26 - $27 /
+/ LABEL @End              ; /
+/     HLT.B               ; / $F8 $00

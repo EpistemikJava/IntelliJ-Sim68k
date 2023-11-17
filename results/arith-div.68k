@@ -1,0 +1,29 @@
+Your Option ('e' to execute a program, 'q' to quit): e
+Name of the 68k binary program ('.68b' will be added automatically): arith-div
+
+Program loaded. 40 bytes in memory.
+
+Enter a value (long) for the register D0: $ffffffff
+Enter a value (word) for the register D1: $fffe
+[ D0 ] = $FFFF0000 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+
+Enter a value (long) for the register D0: $ffff0000
+Enter a value (word) for the register D1: $7e
+[ D0 ] = $FFF0FDF8 (long)
+Status Bits: H:false N:true Z:false V:false C:false
+
+Enter a value (long) for the register D0: 10
+Enter a value (word) for the register D1: -10
+[ D0 ] = $FFFF (long)
+Status Bits: H:false N:false Z:false V:false C:false
+
+Enter a value (long) for the register D0: $0007ffff
+Enter a value (word) for the register D1: $2
+[ D0 ] = $1FFFF (long)
+Status Bits: H:false N:false Z:false V:true C:false
+
+Your Option ('e' to execute a program, 'q' to quit): q
+Bye!
+
+End of program Execution.
