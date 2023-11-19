@@ -17,4 +17,6 @@ IntelliJIDEA
 savedGames
 home
 *.term
+*.log
+*.elog
 
