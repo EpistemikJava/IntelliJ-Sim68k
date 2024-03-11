@@ -9,7 +9,7 @@
  *
  *  IntelliJ Java version
  *  -- created 2021-04
- *  -- updated 2023-11-17
+ *  -- updated 2024-03-10
  *
  *********************************************************************************************/
 
@@ -1350,18 +1350,19 @@ class Sim68k {
      ********************************************************************************************* */
     public static void main(final String[] args) {
         System.out.println( "PROGRAM STARTED ON " + Thread.currentThread() );
-        String logLevel = args.length > 0 ? args[0] : LogControl.DEFAULT_CONSOLE_LEVEL.getName();
-        new Sim68k().startup( logLevel );
+        String conLogLevName = args.length > 0 ? args[0] : LogControl.DEFAULT_CONSOLE_LEVEL.getName();
+        String fileLogLevName = args.length > 1 ? args[1] : LogControl.DEFAULT_FILE_LEVEL.getName();
+        new Sim68k().startup( conLogLevName, fileLogLevName );
         System.out.println ("\nEnd of program Execution.");
         System.exit( 0 );
     }
 
     /** interact with the user and start the program */
-    void startup(String logLevel) {
+    void startup(String conLevel, String fileLevel) {
         // init logging
-        logControl = new LogControl(logLevel);
+        logControl = new LogControl(conLevel, fileLevel);
         logger = logControl.getLogger();
-        logger.config( Sim68k.class.getSimpleName() + " Log Level = " + logLevel );
+        logger.config( Sim68k.class.getSimpleName() + " Log Level = " + conLevel );
 
         mem = new Memory();
         Processor proc = new Processor();

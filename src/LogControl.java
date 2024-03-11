@@ -5,7 +5,7 @@
  * Copyright (c) 2008-2021 Mark Sattolo <epistemik@gmail.com>
  *
  * IntelliJ-IDEA version created 2021-02-13
- *  -- updated 2021-08-05
+ *  -- updated 2024-03-10
  *
  ********************************************************************************/
 
@@ -28,11 +28,12 @@ public class LogControl {
     /**
      * <b>Usual</b> CONSTRUCTOR <br>
      * Set up my Logger, Handler(s) and Formatter(s) and initiate logging
-     * @param lev initial log {@link Level} received from main class
+     * @param conlev console log {@link Level} name received from requesting class
+     * @param filelev file log {@link Level} name received from requesting class
      * @see MhsLogger#getNewLogger(String)
      * @see Logger#addHandler(Handler)
      */
-    public LogControl(final String lev) {
+    public LogControl(final String conlev, final String filelev) {
         // get a Logger for this package
         myLogger = MhsLogger.getNewLogger( MhsLogger.class.getName() );
 
@@ -41,12 +42,17 @@ public class LogControl {
         myLogger.addHandler(textHandler);
 
         // set the level of detail that gets logged to files
-        fileLevel = DEFAULT_FILE_LEVEL;
+        try {
+            fileLevel = Level.parse( filelev );
+        }
+        catch( IllegalArgumentException iae ) {
+            fileLevel = DEFAULT_FILE_LEVEL;
+        }
         myLogger.setLevel( fileLevel );
         myLogger.severe( "INITIAL file log level = " + fileLevel );
 
         // need to set up root Logger to display properly to Console
-        setRootLogger( Level.parse(lev) );
+        setRootLogger( conlev );
     }
 
     /*
@@ -54,7 +60,7 @@ public class LogControl {
      *********************************************************************************************************** */
     /**
      * Set up my Handler(s) and Formatter(s) <br>
-     * <em>called by</em> {@link LogControl#LogControl(String)}
+     * <em>called by</em> {@link LogControl#LogControl(String,String)}
      * @see FileHandler
      * @see Formatter
      * @see Handler#setFormatter
@@ -81,14 +87,19 @@ public class LogControl {
 
     /**
      * Set up the root Logger, which handles Console messages <br>
-     * <em>called by</em> {@link LogControl#LogControl(String)}
-     * @param lev to display at
+     * <em>called by</em> {@link LogControl#LogControl(String,String)}
+     * @param levname name of {@link Level}
      * @see LogManager#getLogger
      * @see Logger#getHandlers
      * @see Handler#setFormatter
      */
-    private void setRootLogger( Level lev ) {
-        consoleLevel = lev;
+    private void setRootLogger( String levname ) {
+        try {
+            consoleLevel = Level.parse( levname );
+        }
+        catch( IllegalArgumentException iae ) {
+            consoleLevel = DEFAULT_CONSOLE_LEVEL;
+        }
         consoleIntLevel = consoleLevel.intValue();
         rootLogger = LogManager.getLogManager().getLogger("");
         try {
@@ -102,7 +113,7 @@ public class LogControl {
             // set formatter and level for the root handler(s)
             for( Handler h : arH ) {
                 System.out.println( "\t" + h.toString() );
-                // send root handler(s) output to a PskFormatter
+                // send root handler(s) output to a new MhsFormatter
                 h.setFormatter( new MhsFormatter() );
                 // need to set the level of the root handler(s) to control the amount of console logging
                 h.setLevel(consoleLevel);
@@ -392,7 +403,7 @@ class MhsLogger extends Logger {
      * @param lev {@link Level} to log at
      */
     protected void send(final Level lev) {
-        if( buffer.length() == 0 )
+        if( buffer.isEmpty() )
             return;
         getCallerClassAndMethodName();
         LogRecord $logRec = getRecord( lev, buffer.toString() );
